@@ -1,8 +1,9 @@
 let teammates = [];
 let fieldPositions = {};
 let battingLineup = [];
-let nextSubId = 100; // Start substitute IDs at 100 to avoid conflicts
+let nextPlayerId = 100; // Start new player IDs at 100 to avoid conflicts
 let selectedPlayer = null; // Track currently selected player for touch mode
+let removeMode = false; // Track if we're in remove mode
 
 async function loadTeammates() {
     try {
@@ -66,6 +67,9 @@ function renderAvailablePlayers() {
 function createPlayerCard(player, forLineup = false) {
     const card = document.createElement('div');
     card.className = 'player-card';
+    if (removeMode && !forLineup) {
+        card.classList.add('removable');
+    }
     card.draggable = true;
     card.dataset.playerId = player.id;
     card.dataset.playerName = player.name;
@@ -87,7 +91,13 @@ function createPlayerCard(player, forLineup = false) {
     
     // Add click handler for touch-friendly selection
     if (!forLineup) {
-        card.addEventListener('click', () => handlePlayerClick(player));
+        card.addEventListener('click', () => {
+            if (removeMode) {
+                handlePlayerRemove(player);
+            } else {
+                handlePlayerClick(player);
+            }
+        });
     }
     
     setupPlayerCardDragEvents(card);
@@ -384,33 +394,114 @@ function setupEventListeners() {
     document.getElementById('reset-field').addEventListener('click', resetField);
     document.getElementById('copy-lineup').addEventListener('click', copyLineup);
     document.getElementById('export-lineup').addEventListener('click', exportLineup);
-    document.getElementById('add-sub-btn').addEventListener('click', addSubstitute);
-    document.getElementById('sub-name-input').addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') addSubstitute();
+    document.getElementById('add-player-btn').addEventListener('click', addPlayer);
+    document.getElementById('remove-player-btn').addEventListener('click', toggleRemoveMode);
+    document.getElementById('copy-roster-btn').addEventListener('click', copyRoster);
+    document.getElementById('reset-roster-btn').addEventListener('click', resetRoster);
+    document.getElementById('player-name-input').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') addPlayer();
     });
     
     // Clear selection when clicking outside
     document.addEventListener('click', (e) => {
         if (!e.target.closest('.player-card') && 
             !e.target.closest('.drop-zone') &&
+            !e.target.closest('.manage-btn') &&
             selectedPlayer) {
             clearSelection();
         }
     });
 }
 
-function addSubstitute() {
-    const input = document.getElementById('sub-name-input');
+function addPlayer() {
+    const input = document.getElementById('player-name-input');
     const name = input.value.trim();
     
     if (name) {
-        const newSub = {
-            id: nextSubId++,
-            name: name + ' (Sub)',
-            isSub: true
+        const newPlayer = {
+            id: nextPlayerId++,
+            name: name
         };
-        teammates.push(newSub);
+        teammates.push(newPlayer);
         input.value = '';
+        updateAllSections();
+        saveData();
+    }
+}
+
+function toggleRemoveMode() {
+    removeMode = !removeMode;
+    const btn = document.getElementById('remove-player-btn');
+    if (removeMode) {
+        btn.textContent = 'Cancel Remove';
+        btn.style.backgroundColor = '#991b1b';
+        clearSelection();
+    } else {
+        btn.textContent = 'Remove Player';
+        btn.style.backgroundColor = '';
+    }
+    updateAllSections();
+}
+
+function handlePlayerRemove(player) {
+    if (confirm(`Remove ${player.name} from the roster?`)) {
+        // Remove from field if they're on it
+        removePlayerFromField(player.id);
+        
+        // Remove from teammates array
+        teammates = teammates.filter(t => t.id !== player.id);
+        
+        // Turn off remove mode
+        toggleRemoveMode();
+        
+        updateAllSections();
+        saveData();
+    }
+}
+
+function copyRoster() {
+    let rosterText = 'Team Roster:\n\n';
+    teammates.forEach((player, index) => {
+        rosterText += `${index + 1}. ${player.name}\n`;
+    });
+    
+    navigator.clipboard.writeText(rosterText).then(() => {
+        alert('Roster copied to clipboard!');
+    }).catch(err => {
+        console.error('Failed to copy roster:', err);
+        alert('Failed to copy roster. Please try again.');
+    });
+}
+
+function resetRoster() {
+    if (confirm('Reset to original roster? This will remove all added players and changes.')) {
+        // Reset to original teammates
+        teammates = [
+            {"name": "Kyle H", "id": 1},
+            {"name": "Trevar", "id": 2},
+            {"name": "Jayson G", "id": 3},
+            {"name": "Kyle P", "id": 4},
+            {"name": "Jason", "id": 5},
+            {"name": "Andy", "id": 6},
+            {"name": "Damion", "id": 7},
+            {"name": "Mitch", "id": 8},
+            {"name": "Jaspen", "id": 9},
+            {"name": "Joe", "id": 10},
+            {"name": "Dan", "id": 11},
+            {"name": "Matt", "id": 12}
+        ];
+        
+        // Reset field and lineup
+        fieldPositions = {};
+        battingLineup = [];
+        nextPlayerId = 100;
+        
+        // Clear any modes
+        if (removeMode) {
+            toggleRemoveMode();
+        }
+        clearSelection();
+        
         updateAllSections();
         saveData();
     }
@@ -462,11 +553,10 @@ function exportLineup() {
 }
 
 function saveData() {
-    const substitutes = teammates.filter(t => t.isSub);
     const data = {
         fieldPositions,
         battingLineup: battingLineup.map(p => p.id),
-        substitutes: substitutes
+        teammates: teammates
     };
     localStorage.setItem('softballData', JSON.stringify(data));
 }
@@ -477,16 +567,14 @@ function loadSavedData() {
         const data = JSON.parse(savedData);
         fieldPositions = data.fieldPositions || {};
         
-        // Load substitutes
-        if (data.substitutes && data.substitutes.length > 0) {
-            data.substitutes.forEach(sub => {
-                if (!teammates.find(t => t.id === sub.id)) {
-                    teammates.push(sub);
-                    if (sub.id >= nextSubId) {
-                        nextSubId = sub.id + 1;
-                    }
-                }
-            });
+        // Load saved teammates if available
+        if (data.teammates && data.teammates.length > 0) {
+            teammates = data.teammates;
+            // Update nextPlayerId to avoid conflicts
+            const maxId = Math.max(...teammates.map(t => t.id));
+            if (maxId >= nextPlayerId) {
+                nextPlayerId = maxId + 1;
+            }
         }
         
         if (data.battingLineup && data.battingLineup.length > 0) {

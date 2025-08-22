@@ -301,16 +301,17 @@ h2 {
     border-radius: 4px;
 }
 
-.add-substitute {
+.player-management {
     display: flex;
+    flex-wrap: wrap;
     gap: 10px;
     margin-top: 15px;
     align-items: center;
 }
 
-.sub-input {
+.player-input {
     flex: 1;
-    max-width: 250px;
+    min-width: 200px;
     padding: 8px 12px;
     background-color: #3a3a3a;
     color: #e0e0e0;
@@ -319,16 +320,14 @@ h2 {
     font-size: 14px;
 }
 
-.sub-input:focus {
+.player-input:focus {
     outline: none;
     border-color: #4ade80;
     background-color: #4a4a4a;
 }
 
-.add-sub-btn {
+.manage-btn {
     padding: 8px 16px;
-    background-color: #22c55e;
-    color: #1a1a1a;
     border: none;
     border-radius: 4px;
     font-size: 14px;
@@ -337,9 +336,49 @@ h2 {
     transition: all 0.3s ease;
 }
 
-.add-sub-btn:hover {
+.manage-btn.add {
+    background-color: #22c55e;
+    color: #1a1a1a;
+}
+
+.manage-btn.add:hover {
     background-color: #4ade80;
     transform: translateY(-1px);
+}
+
+.manage-btn.remove {
+    background-color: #ef4444;
+    color: white;
+}
+
+.manage-btn.remove:hover {
+    background-color: #dc2626;
+    transform: translateY(-1px);
+}
+
+.manage-btn.copy {
+    background-color: #3b82f6;
+    color: white;
+}
+
+.manage-btn.copy:hover {
+    background-color: #2563eb;
+    transform: translateY(-1px);
+}
+
+.manage-btn.reset {
+    background-color: #6b7280;
+    color: white;
+}
+
+.manage-btn.reset:hover {
+    background-color: #4b5563;
+    transform: translateY(-1px);
+}
+
+.player-card.removable {
+    border-color: #ef4444;
+    background-color: rgba(239, 68, 68, 0.2);
 }
 
 /* Tablet styles */
@@ -434,16 +473,16 @@ h2 {
         font-size: 14px;
     }
     
-    .add-substitute {
+    .player-management {
         flex-direction: column;
         gap: 8px;
     }
     
-    .sub-input {
+    .player-input {
         max-width: 100%;
     }
     
-    .add-sub-btn {
+    .manage-btn {
         width: 100%;
     }
     
