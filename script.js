@@ -45,7 +45,8 @@ let currentAtBat = {
     playerId: null,
     atBatNumber: 1,
     result: null,
-    rbi: 0
+    rbi: 0,
+    runs: 0
 };
 
 async function loadTeammates() {
@@ -475,6 +476,7 @@ function setupEventListeners() {
     // Stats page event listeners
     document.getElementById('current-batter').addEventListener('change', updateCurrentBatter);
     document.getElementById('at-bat-number').addEventListener('change', updateAtBatNumber);
+    document.getElementById('stats-help-btn').addEventListener('click', toggleStatsHelp);
     
     document.querySelectorAll('.result-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
@@ -488,6 +490,15 @@ function setupEventListeners() {
             document.querySelectorAll('.rbi-btn').forEach(b => b.classList.remove('active'));
             e.target.classList.add('active');
             currentAtBat.rbi = parseInt(e.target.dataset.rbi);
+        });
+    });
+    
+    // Runs button listeners
+    document.querySelectorAll('.runs-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            document.querySelectorAll('.runs-btn').forEach(b => b.classList.remove('active'));
+            e.target.classList.add('active');
+            currentAtBat.runs = parseInt(e.target.dataset.runs);
         });
     });
     
@@ -873,7 +884,8 @@ function recordAtBatResult(result) {
             homeruns: 0,
             outs: 0,
             fieldersChoice: 0,
-            rbi: 0
+            rbi: 0,
+            runs: 0
         };
     }
     
@@ -919,15 +931,18 @@ function recordAtBatResult(result) {
                 break;
         }
         
-        // Subtract old RBI
+        // Subtract old RBI and runs
         const oldRBI = gameStats[playerId].atBats[existingAtBatIndex].rbi || 0;
+        const oldRuns = gameStats[playerId].atBats[existingAtBatIndex].runs || 0;
         gameStats[playerId].rbi -= oldRBI;
+        gameStats[playerId].runs -= oldRuns;
         
         // Update the at-bat with new result
         gameStats[playerId].atBats[existingAtBatIndex] = {
             number: atBatNum,
             result: result,
             rbi: currentAtBat.rbi,
+            runs: currentAtBat.runs,
             time: new Date().toLocaleTimeString()
         };
     } else {
@@ -936,6 +951,7 @@ function recordAtBatResult(result) {
             number: atBatNum,
             result: result,
             rbi: currentAtBat.rbi,
+            runs: currentAtBat.runs,
             time: new Date().toLocaleTimeString()
         };
         
@@ -981,13 +997,17 @@ function recordAtBatResult(result) {
         });
     });
     
-    // Add RBI
+    // Add RBI and runs
     gameStats[playerId].rbi += currentAtBat.rbi;
+    gameStats[playerId].runs += currentAtBat.runs;
     
-    // Reset RBI selection to 0 for next at-bat
+    // Reset RBI and runs selection for next at-bat
     document.querySelectorAll('.rbi-btn').forEach(b => b.classList.remove('active'));
     document.querySelector('.rbi-btn[data-rbi="0"]').classList.add('active');
+    document.querySelectorAll('.runs-btn').forEach(b => b.classList.remove('active'));
+    document.querySelector('.runs-btn[data-runs="0"]').classList.add('active');
     currentAtBat.rbi = 0;
+    currentAtBat.runs = 0;
     
     // Update display
     displayGameStats();
@@ -1016,7 +1036,7 @@ function displayGameStats() {
         
         playerDiv.innerHTML = `
             <h5>${player.name}</h5>
-            <div class="stat-line">AVG: ${avg} (${player.hits}-${atBats}) | RBI: ${player.rbi}</div>
+            <div class="stat-line">AVG: ${avg} (${player.hits}-${atBats}) | Runs: ${player.runs} | RBI: ${player.rbi}</div>
             <div class="stat-line">1B: ${player.singles} | 2B: ${player.doubles} | 3B: ${player.triples} | HR: ${player.homeruns}</div>
             <div class="stat-line">Outs: ${player.outs} | FC: ${player.fieldersChoice}</div>
         `;
@@ -1074,16 +1094,34 @@ function clearGameStats() {
             playerId: null,
             atBatNumber: 1,
             result: null,
-            rbi: 0
+            rbi: 0,
+            runs: 0
         };
         document.getElementById('current-batter').value = '';
         document.getElementById('at-bat-number').value = 1;
         
-        // Reset RBI buttons
+        // Reset RBI and runs buttons
         document.querySelectorAll('.rbi-btn').forEach(b => b.classList.remove('active'));
         document.querySelector('.rbi-btn[data-rbi="0"]').classList.add('active');
+        document.querySelectorAll('.runs-btn').forEach(b => b.classList.remove('active'));
+        document.querySelector('.runs-btn[data-runs="0"]').classList.add('active');
         
         displayGameStats();
+    }
+}
+
+function toggleStatsHelp() {
+    const helpTooltip = document.getElementById('stats-help');
+    const helpBtn = document.getElementById('stats-help-btn');
+    
+    if (helpTooltip.style.display === 'none') {
+        helpTooltip.style.display = 'block';
+        helpBtn.style.backgroundColor = '#22c55e';
+        helpBtn.textContent = '×';
+    } else {
+        helpTooltip.style.display = 'none';
+        helpBtn.style.backgroundColor = '#4ade80';
+        helpBtn.textContent = '?';
     }
 }
 
@@ -1181,6 +1219,7 @@ function displaySummaryStats() {
     const totalGames = [...new Set(filteredData.map(stat => stat.gameDate))].length;
     const totalAtBats = filteredData.reduce((sum, stat) => sum + stat.atBats, 0);
     const totalHits = filteredData.reduce((sum, stat) => sum + stat.hits, 0);
+    const totalRuns = filteredData.reduce((sum, stat) => sum + (stat.runs || 0), 0);
     const totalRBI = filteredData.reduce((sum, stat) => sum + (stat.rbi || 0), 0);
     const teamAverage = totalAtBats > 0 ? (totalHits / totalAtBats).toFixed(3) : '.000';
     
@@ -1196,6 +1235,10 @@ function displaySummaryStats() {
         <div class="summary-card">
             <div class="stat-value">${totalHits}</div>
             <div class="stat-label">Total Hits</div>
+        </div>
+        <div class="summary-card">
+            <div class="stat-value">${totalRuns}</div>
+            <div class="stat-label">Total Runs</div>
         </div>
         <div class="summary-card">
             <div class="stat-value">${totalRBI}</div>
@@ -1227,6 +1270,7 @@ function displayPlayerTable() {
                 homeRuns: 0,
                 fieldersChoice: 0,
                 outs: 0,
+                runs: 0,
                 rbi: 0
             };
         }
@@ -1241,6 +1285,7 @@ function displayPlayerTable() {
         player.homeRuns += stat.homeRuns;
         player.fieldersChoice += stat.fieldersChoice;
         player.outs += stat.outs;
+        player.runs += (stat.runs || 0);
         player.rbi += (stat.rbi || 0);
     });
     
@@ -1256,6 +1301,7 @@ function displayPlayerTable() {
         homeRuns: stats.homeRuns,
         fieldersChoice: stats.fieldersChoice,
         outs: stats.outs,
+        runs: stats.runs,
         rbi: stats.rbi,
         average: stats.atBats > 0 ? (stats.hits / stats.atBats).toFixed(3) : '.000'
     })).sort((a, b) => parseFloat(b.average) - parseFloat(a.average));
@@ -1268,6 +1314,7 @@ function displayPlayerTable() {
             <td>${player.atBats}</td>
             <td>${player.hits}</td>
             <td>${player.average}</td>
+            <td>${player.runs}</td>
             <td>${player.rbi}</td>
             <td>${player.singles}</td>
             <td>${player.doubles}</td>

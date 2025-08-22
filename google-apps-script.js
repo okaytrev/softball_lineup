@@ -15,7 +15,7 @@ function doGet(e) {
     }
     
     // Get all stats data (skip header row)
-    const dataRange = statsSheet.getRange(2, 1, statsSheet.getLastRow() - 1, 12);
+    const dataRange = statsSheet.getRange(2, 1, statsSheet.getLastRow() - 1, 13);
     const statsData = dataRange.getValues();
     
     // Convert to structured format
@@ -31,7 +31,8 @@ function doGet(e) {
       battingAverage: row[8],
       outs: row[9],
       fieldersChoice: row[10],
-      rbi: row[11] || 0
+      rbi: row[11] || 0,
+      runs: row[12] || 0
     }));
     
     return ContentService
@@ -91,11 +92,12 @@ function doPost(e) {
           'Batting Average',
           'Outs',
           'Fielders Choice',
-          'RBI'
+          'RBI',
+          'Runs'
         ]);
         
         // Format the header row
-        const headerRange = statsSheet.getRange(1, 1, 1, 12);
+        const headerRange = statsSheet.getRange(1, 1, 1, 13);
         headerRange.setFontWeight('bold');
         headerRange.setBackground('#4ade80');
         headerRange.setFontColor('#1a1a1a');
@@ -123,7 +125,8 @@ function doPost(e) {
           battingAverage,
           playerStats.outs,
           playerStats.fieldersChoice,
-          playerStats.rbi || 0
+          playerStats.rbi || 0,
+          playerStats.runs || 0
         ]);
       });
       

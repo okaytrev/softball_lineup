@@ -105,7 +105,26 @@
         <!-- Stats Page -->
         <div id="stats-page" class="page" style="display: none;">
             <div class="stats-container">
-                <h2>Game Stats</h2>
+                <div class="stats-header">
+                    <h2>Game Stats</h2>
+                    <button class="help-btn" id="stats-help-btn">?</button>
+                </div>
+                
+                <!-- Help tooltip -->
+                <div id="stats-help" class="help-tooltip" style="display: none;">
+                    <div class="help-content">
+                        <h4>How to Record Stats</h4>
+                        <ol>
+                            <li><strong>Select Batter:</strong> Choose player from batting lineup</li>
+                            <li><strong>Set At-Bat #:</strong> Enter the at-bat number (doesn't auto-increment)</li>
+                            <li><strong>Choose RBI:</strong> Select 0-4 runs this batter drove in</li>
+                            <li><strong>Did Player Score:</strong> Yes if this batter scored a run</li>
+                            <li><strong>Record Result:</strong> Click the at-bat result button</li>
+                            <li><strong>Fix Mistakes:</strong> Re-select same at-bat # to correct</li>
+                        </ol>
+                        <p><strong>Tip:</strong> RBI = runs driven in by this batter. Runs = this batter scoring.</p>
+                    </div>
+                </div>
                 
                 <div class="stats-content">
                     <div class="current-batter-section">
@@ -120,8 +139,27 @@
                             <input type="number" id="at-bat-number" class="at-bat-input" min="1" value="1">
                         </div>
                         
+                        <div class="rbi-section">
+                            <label>RBI (Runs Batted In):</label>
+                            <div class="rbi-buttons">
+                                <button class="rbi-btn active" data-rbi="0">0</button>
+                                <button class="rbi-btn" data-rbi="1">1</button>
+                                <button class="rbi-btn" data-rbi="2">2</button>
+                                <button class="rbi-btn" data-rbi="3">3</button>
+                                <button class="rbi-btn" data-rbi="4">4</button>
+                            </div>
+                        </div>
+                        
+                        <div class="runs-section">
+                            <label>Did This Player Score?</label>
+                            <div class="runs-buttons">
+                                <button class="runs-btn active" data-runs="0">No</button>
+                                <button class="runs-btn" data-runs="1">Yes</button>
+                            </div>
+                        </div>
+                        
                         <div class="at-bat-results">
-                            <h4>Result:</h4>
+                            <h4>At-Bat Result:</h4>
                             <div class="result-buttons">
                                 <button class="result-btn" data-result="single">Single</button>
                                 <button class="result-btn" data-result="double">Double</button>
@@ -129,17 +167,6 @@
                                 <button class="result-btn" data-result="homerun">Home Run</button>
                                 <button class="result-btn" data-result="fielders-choice">Fielder's Choice</button>
                                 <button class="result-btn" data-result="out">Out</button>
-                            </div>
-                            
-                            <div class="rbi-section">
-                                <label>RBI (Runs Batted In):</label>
-                                <div class="rbi-buttons">
-                                    <button class="rbi-btn active" data-rbi="0">0</button>
-                                    <button class="rbi-btn" data-rbi="1">1</button>
-                                    <button class="rbi-btn" data-rbi="2">2</button>
-                                    <button class="rbi-btn" data-rbi="3">3</button>
-                                    <button class="rbi-btn" data-rbi="4">4</button>
-                                </div>
                             </div>
                         </div>
                     </div>
@@ -201,6 +228,7 @@
                                         <th>AB</th>
                                         <th>H</th>
                                         <th>AVG</th>
+                                        <th>R</th>
                                         <th>RBI</th>
                                         <th>1B</th>
                                         <th>2B</th>
