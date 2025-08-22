@@ -1,3 +1,34 @@
+// Simple authentication
+const TEAM_PASSWORD = 'bonix'; // Change this to your team's password
+
+function checkAuth() {
+    const savedAuth = localStorage.getItem('softballAuth');
+    if (savedAuth === TEAM_PASSWORD) {
+        return true;
+    }
+    
+    const password = prompt('Enter team password to access the Softball Manager:');
+    if (password === TEAM_PASSWORD) {
+        localStorage.setItem('softballAuth', password);
+        return true;
+    } else {
+        document.body.innerHTML = `
+            <div style="display: flex; justify-content: center; align-items: center; height: 100vh; background-color: #1a1a1a;">
+                <div style="text-align: center; color: #e0e0e0;">
+                    <h1 style="color: #ef4444;">Access Denied</h1>
+                    <p>Invalid password. Please refresh and try again.</p>
+                </div>
+            </div>
+        `;
+        return false;
+    }
+}
+
+// Check authentication before initializing
+if (!checkAuth()) {
+    throw new Error('Unauthorized access');
+}
+
 let teammates = [];
 let fieldPositions = {};
 let battingLineup = [];
@@ -396,6 +427,7 @@ function setupEventListeners() {
     document.getElementById('remove-player-btn').addEventListener('click', toggleRemoveMode);
     document.getElementById('copy-roster-btn').addEventListener('click', copyRoster);
     document.getElementById('reset-roster-btn').addEventListener('click', resetRoster);
+    document.getElementById('logout-btn').addEventListener('click', logout);
     document.getElementById('player-name-input').addEventListener('keypress', (e) => {
         if (e.key === 'Enter') addPlayer();
     });
@@ -502,6 +534,13 @@ function resetRoster() {
         
         updateAllSections();
         saveData();
+    }
+}
+
+function logout() {
+    if (confirm('Are you sure you want to logout?')) {
+        localStorage.removeItem('softballAuth');
+        location.reload();
     }
 }
 
