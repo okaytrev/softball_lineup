@@ -291,6 +291,14 @@ h2 {
     box-shadow: 0 2px 4px rgba(34, 197, 94, 0.3);
 }
 
+.cloud-btn {
+    background-color: #3b82f6 !important;
+}
+
+.cloud-btn:hover {
+    background-color: #2563eb !important;
+}
+
 
 .field-position-label {
     font-size: 12px;

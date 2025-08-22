@@ -1,6 +1,9 @@
 // Simple authentication
 const TEAM_PASSWORD = 'bonix'; // Change this to your team's password
 
+// Google Sheets Integration
+const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwFqW85BjRB9DcYTeyg_hXYSkMdAbYvj3QgN1EGMllHUsfOvzwbjeRX471nndzFXp6d/exec'; // Replace with your Apps Script URL
+
 function checkAuth() {
     const savedAuth = localStorage.getItem('softballAuth');
     if (savedAuth === TEAM_PASSWORD) {
@@ -67,6 +70,9 @@ function initializeApp() {
     updateAllSections();
     setupDragAndDrop();
     setupEventListeners();
+    
+    // Auto-load from cloud on startup
+    loadFromCloud(true); // true = silent load
 }
 
 function getPlayerLocation(playerId) {
@@ -427,6 +433,7 @@ function setupEventListeners() {
     document.getElementById('remove-player-btn').addEventListener('click', toggleRemoveMode);
     document.getElementById('copy-roster-btn').addEventListener('click', copyRoster);
     document.getElementById('reset-roster-btn').addEventListener('click', resetRoster);
+    document.getElementById('save-cloud').addEventListener('click', saveToCloud);
     document.getElementById('player-name-input').addEventListener('keypress', (e) => {
         if (e.key === 'Enter') addPlayer();
     });
@@ -589,6 +596,92 @@ function saveData() {
         teammates: teammates
     };
     localStorage.setItem('softballData', JSON.stringify(data));
+}
+
+// Cloud save to Google Sheets
+async function saveToCloud() {
+    const lineup = {
+        fieldPositions,
+        battingLineup: battingLineup.map(p => ({
+            id: p.id,
+            name: p.name,
+            position: getPlayerFieldPosition(p.id)
+        })),
+        teammates: teammates,
+        savedAt: new Date().toISOString()
+    };
+    
+    try {
+        const response = await fetch(GOOGLE_SCRIPT_URL, {
+            method: 'POST',
+            mode: 'no-cors', // Required for Google Apps Script
+            headers: {
+                'Content-Type': 'text/plain', // Apps Script requirement
+            },
+            body: JSON.stringify({
+                lineup: lineup,
+                savedBy: 'Coach'
+            })
+        });
+        
+        alert('Lineup saved to cloud! Team can now access it.');
+    } catch (error) {
+        console.error('Cloud save error:', error);
+        alert('Cloud save failed, but lineup is saved locally.');
+    }
+}
+
+// Load from Google Sheets
+async function loadFromCloud(silent = false) {
+    try {
+        const response = await fetch(GOOGLE_SCRIPT_URL);
+        const data = await response.json();
+        
+        if (data.error) {
+            if (!silent) {
+                alert('No cloud lineup found.');
+            }
+            return;
+        }
+        
+        const lineup = data.lineup;
+        
+        // Update local data
+        if (lineup.fieldPositions) {
+            fieldPositions = lineup.fieldPositions;
+        }
+        
+        if (lineup.teammates) {
+            teammates = lineup.teammates;
+            // Update nextPlayerId
+            const maxId = Math.max(...teammates.map(t => t.id));
+            if (maxId >= nextPlayerId) {
+                nextPlayerId = maxId + 1;
+            }
+        }
+        
+        if (lineup.battingLineup) {
+            battingLineup = lineup.battingLineup.map(savedPlayer => {
+                const teammate = teammates.find(t => t.id === savedPlayer.id);
+                return teammate || savedPlayer;
+            }).filter(Boolean);
+        }
+        
+        updateAllSections();
+        saveData(); // Save to local storage
+        
+        if (!silent) {
+            alert(`Lineup loaded from cloud!\nLast saved: ${new Date(data.timestamp).toLocaleString()}`);
+        } else {
+            console.log('Cloud lineup loaded:', new Date(data.timestamp).toLocaleString());
+        }
+        
+    } catch (error) {
+        console.error('Cloud load error:', error);
+        if (!silent) {
+            alert('Failed to load from cloud.');
+        }
+    }
 }
 
 function loadSavedData() {
