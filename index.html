@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Softball Team Manager</title>
+    <link rel="stylesheet" href="styles.css">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Softball Manager</h1>
+        </header>
+        
+        <div class="available-players-section">
+            <h2>Available Players</h2>
+            <div id="player-list" class="player-list horizontal"></div>
+            <div class="add-substitute">
+                <input type="text" id="sub-name-input" placeholder="Enter substitute name..." class="sub-input">
+                <button id="add-sub-btn" class="add-sub-btn">Add Sub</button>
+            </div>
+        </div>
+        
+        <div class="main-content">
+            <div class="field-section">
+                <h2>Field Positions</h2>
+                <div class="field-container">
+                    <img src="baseball-field-png.png" alt="Baseball Field" class="field-image">
+                    <div class="positions">
+                        <div class="position" data-position="pitcher" style="top: 55%; left: 50%;">
+                            <div class="drop-zone" data-position="pitcher">P</div>
+                        </div>
+                        <div class="position" data-position="catcher" style="top: 75%; left: 50%;">
+                            <div class="drop-zone" data-position="catcher">C</div>
+                        </div>
+                        <div class="position" data-position="first-base" style="top: 55%; left: 70%;">
+                            <div class="drop-zone" data-position="first-base">1B</div>
+                        </div>
+                        <div class="position" data-position="second-base" style="top: 40%; left: 65%;">
+                            <div class="drop-zone" data-position="second-base">2B</div>
+                        </div>
+                        <div class="position" data-position="third-base" style="top: 55%; left: 30%;">
+                            <div class="drop-zone" data-position="third-base">3B</div>
+                        </div>
+                        <div class="position" data-position="shortstop" style="top: 40%; left: 35%;">
+                            <div class="drop-zone" data-position="shortstop">SS</div>
+                        </div>
+                        <div class="position" data-position="left-field" style="top: 20%; left: 20%;">
+                            <div class="drop-zone" data-position="left-field">LF</div>
+                        </div>
+                        <div class="position" data-position="left-center" style="top: 17%; left: 35%;">
+                            <div class="drop-zone" data-position="left-center">LC</div>
+                        </div>
+                        <div class="position" data-position="right-center" style="top: 17%; left: 65%;">
+                            <div class="drop-zone" data-position="right-center">RC</div>
+                        </div>
+                        <div class="position" data-position="right-field" style="top: 20%; left: 80%;">
+                            <div class="drop-zone" data-position="right-field">RF</div>
+                        </div>
+                        <!-- DH positions outside the field -->
+                        <div class="position" data-position="dh1" style="top: 55%; left: 5%;">
+                            <div class="drop-zone dh-position" data-position="dh1">DH1</div>
+                        </div>
+                        <div class="position" data-position="dh2" style="top: 65%; left: 5%;">
+                            <div class="drop-zone dh-position" data-position="dh2">DH2</div>
+                        </div>
+                        <div class="position" data-position="dh3" style="top: 75%; left: 5%;">
+                            <div class="drop-zone dh-position" data-position="dh3">DH3</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="controls">
+                    <button id="reset-field">Reset Field</button>
+                    <button id="copy-lineup">Copy Lineup</button>
+                    <button id="export-lineup">Export Lineup</button>
+                </div>
+            </div>
+            
+            <div class="batting-lineup-section">
+                <h2>Batting Lineup</h2>
+                <div id="lineup-list" class="lineup-list drop-zone-list"></div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="script.js"></script>
+</body>
+</html>
