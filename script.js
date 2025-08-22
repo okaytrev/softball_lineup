@@ -633,6 +633,12 @@ async function saveToCloud() {
 
 // Load from Google Sheets
 async function loadFromCloud(silent = false) {
+    // Show loading indicator
+    const loadingIndicator = document.getElementById('loading-indicator');
+    if (silent && loadingIndicator) {
+        loadingIndicator.style.display = 'block';
+    }
+    
     try {
         const response = await fetch(GOOGLE_SCRIPT_URL);
         const data = await response.json();
@@ -640,6 +646,10 @@ async function loadFromCloud(silent = false) {
         if (data.error) {
             if (!silent) {
                 alert('No cloud lineup found.');
+            }
+            // Hide loading indicator
+            if (loadingIndicator) {
+                loadingIndicator.style.display = 'none';
             }
             return;
         }
@@ -676,10 +686,19 @@ async function loadFromCloud(silent = false) {
             console.log('Cloud lineup loaded:', new Date(data.timestamp).toLocaleString());
         }
         
+        // Hide loading indicator
+        if (loadingIndicator) {
+            loadingIndicator.style.display = 'none';
+        }
+        
     } catch (error) {
         console.error('Cloud load error:', error);
         if (!silent) {
             alert('Failed to load from cloud.');
+        }
+        // Hide loading indicator on error
+        if (loadingIndicator) {
+            loadingIndicator.style.display = 'none';
         }
     }
 }
