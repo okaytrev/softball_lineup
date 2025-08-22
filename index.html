@@ -12,6 +12,11 @@
     <div class="container">
         <header>
             <h1>Softball Manager</h1>
+            <nav class="nav-menu">
+                <button class="nav-btn active" data-page="lineup">Lineup</button>
+                <button class="nav-btn" data-page="stats">Stats</button>
+                <button class="nav-btn" data-page="history">History</button>
+            </nav>
         </header>
         
         <!-- Loading indicator -->
@@ -20,7 +25,9 @@
             <p>Loading last saved lineup...</p>
         </div>
         
-        <div class="available-players-section">
+        <!-- Lineup Page -->
+        <div id="lineup-page" class="page active">
+            <div class="available-players-section">
             <h2>Available Players</h2>
             <div id="player-list" class="player-list horizontal"></div>
             <div class="player-management">
@@ -91,6 +98,132 @@
             <div class="batting-lineup-section">
                 <h2>Batting Lineup</h2>
                 <div id="lineup-list" class="lineup-list drop-zone-list"></div>
+            </div>
+        </div>
+        </div>
+        
+        <!-- Stats Page -->
+        <div id="stats-page" class="page" style="display: none;">
+            <div class="stats-container">
+                <h2>Game Stats</h2>
+                
+                <div class="stats-content">
+                    <div class="current-batter-section">
+                        <h3>Current At Bat</h3>
+                        <div class="at-bat-info">
+                            <label>Batter:</label>
+                            <select id="current-batter" class="batter-select">
+                                <option value="">Select a player...</option>
+                            </select>
+                            
+                            <label>At Bat #:</label>
+                            <input type="number" id="at-bat-number" class="at-bat-input" min="1" value="1">
+                        </div>
+                        
+                        <div class="at-bat-results">
+                            <h4>Result:</h4>
+                            <div class="result-buttons">
+                                <button class="result-btn" data-result="single">Single</button>
+                                <button class="result-btn" data-result="double">Double</button>
+                                <button class="result-btn" data-result="triple">Triple</button>
+                                <button class="result-btn" data-result="homerun">Home Run</button>
+                                <button class="result-btn" data-result="fielders-choice">Fielder's Choice</button>
+                                <button class="result-btn" data-result="out">Out</button>
+                            </div>
+                            
+                            <div class="rbi-section">
+                                <label>RBI (Runs Batted In):</label>
+                                <div class="rbi-buttons">
+                                    <button class="rbi-btn active" data-rbi="0">0</button>
+                                    <button class="rbi-btn" data-rbi="1">1</button>
+                                    <button class="rbi-btn" data-rbi="2">2</button>
+                                    <button class="rbi-btn" data-rbi="3">3</button>
+                                    <button class="rbi-btn" data-rbi="4">4</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="game-stats-section">
+                        <h3>Today's Stats</h3>
+                        <div id="game-stats-display" class="stats-display">
+                            <!-- Stats will be displayed here -->
+                        </div>
+                        
+                        <div class="stats-controls">
+                            <button id="save-stats" class="cloud-btn">Save Stats to Cloud</button>
+                            <button id="clear-stats">Clear Today's Stats</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- History Page -->
+        <div id="history-page" class="page" style="display: none;">
+            <div class="history-container">
+                <h2>Season Statistics</h2>
+                
+                <div class="history-controls">
+                    <div class="filter-section">
+                        <label>Filter by Player:</label>
+                        <select id="player-filter" class="filter-select">
+                            <option value="">All Players</option>
+                        </select>
+                        
+                        <label>Filter by Date Range:</label>
+                        <input type="date" id="date-from" class="date-input">
+                        <span> to </span>
+                        <input type="date" id="date-to" class="date-input">
+                        
+                        <button id="refresh-history" class="manage-btn copy">Refresh Data</button>
+                    </div>
+                </div>
+                
+                <div class="history-content">
+                    <!-- Summary Statistics -->
+                    <div class="summary-stats">
+                        <h3>Season Summary</h3>
+                        <div id="summary-display" class="summary-grid">
+                            <!-- Summary stats will be displayed here -->
+                        </div>
+                    </div>
+                    
+                    <!-- Detailed Player Stats -->
+                    <div class="player-stats-table">
+                        <h3>Player Statistics</h3>
+                        <div id="player-table-container">
+                            <table id="player-stats-table" class="stats-table">
+                                <thead>
+                                    <tr>
+                                        <th>Player</th>
+                                        <th>Games</th>
+                                        <th>AB</th>
+                                        <th>H</th>
+                                        <th>AVG</th>
+                                        <th>RBI</th>
+                                        <th>1B</th>
+                                        <th>2B</th>
+                                        <th>3B</th>
+                                        <th>HR</th>
+                                        <th>OUT</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="player-stats-body">
+                                    <!-- Player stats will be populated here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <!-- Game by Game Details -->
+                    <div class="game-details">
+                        <h3>Game Details</h3>
+                        <div id="game-details-container">
+                            <!-- Game details will be displayed here -->
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

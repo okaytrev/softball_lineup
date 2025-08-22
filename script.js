@@ -39,6 +39,15 @@ let nextPlayerId = 100; // Start new player IDs at 100 to avoid conflicts
 let selectedPlayer = null; // Track currently selected player for touch mode
 let removeMode = false; // Track if we're in remove mode
 
+// Stats tracking
+let gameStats = {}; // Store stats for current game
+let currentAtBat = {
+    playerId: null,
+    atBatNumber: 1,
+    result: null,
+    rbi: 0
+};
+
 async function loadTeammates() {
     try {
         const response = await fetch('teammates.json');
@@ -438,6 +447,53 @@ function setupEventListeners() {
         if (e.key === 'Enter') addPlayer();
     });
     
+    // Navigation
+    document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            switchPage(e.target.dataset.page);
+        });
+    });
+    
+    // History page event listeners
+    document.getElementById('refresh-history').addEventListener('click', loadHistoricalStats);
+    document.getElementById('player-filter').addEventListener('change', filterHistoricalStats);
+    document.getElementById('date-from').addEventListener('change', filterHistoricalStats);
+    document.getElementById('date-to').addEventListener('change', filterHistoricalStats);
+    
+    // Handle scroll indicator for mobile tables
+    const tableContainer = document.getElementById('player-table-container');
+    if (tableContainer) {
+        tableContainer.addEventListener('scroll', function() {
+            if (this.scrollLeft > 10) {
+                this.classList.add('scrolled');
+            } else {
+                this.classList.remove('scrolled');
+            }
+        });
+    }
+    
+    // Stats page event listeners
+    document.getElementById('current-batter').addEventListener('change', updateCurrentBatter);
+    document.getElementById('at-bat-number').addEventListener('change', updateAtBatNumber);
+    
+    document.querySelectorAll('.result-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            recordAtBatResult(e.target.dataset.result);
+        });
+    });
+    
+    // RBI button listeners
+    document.querySelectorAll('.rbi-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            document.querySelectorAll('.rbi-btn').forEach(b => b.classList.remove('active'));
+            e.target.classList.add('active');
+            currentAtBat.rbi = parseInt(e.target.dataset.rbi);
+        });
+    });
+    
+    document.getElementById('save-stats').addEventListener('click', saveStatsToCloud);
+    document.getElementById('clear-stats').addEventListener('click', clearGameStats);
+    
     // Clear selection when clicking outside
     document.addEventListener('click', (e) => {
         if (!e.target.closest('.player-card') && 
@@ -600,6 +656,13 @@ function saveData() {
 
 // Cloud save to Google Sheets
 async function saveToCloud() {
+    const saveBtn = document.getElementById('save-cloud');
+    const originalText = saveBtn.textContent;
+    
+    // Add loading state
+    saveBtn.classList.add('btn-loading');
+    saveBtn.disabled = true;
+    
     const lineup = {
         fieldPositions,
         battingLineup: battingLineup.map(p => ({
@@ -624,10 +687,18 @@ async function saveToCloud() {
             })
         });
         
+        // Simulate minimum loading time for better UX
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
         alert('Lineup saved to cloud! Team can now access it.');
     } catch (error) {
         console.error('Cloud save error:', error);
         alert('Cloud save failed, but lineup is saved locally.');
+    } finally {
+        // Remove loading state
+        saveBtn.classList.remove('btn-loading');
+        saveBtn.disabled = false;
+        saveBtn.textContent = originalText;
     }
 }
 
@@ -730,3 +801,537 @@ function loadSavedData() {
 }
 
 loadTeammates();
+
+// Navigation and Stats Functions
+function switchPage(pageName) {
+    // Update nav buttons
+    document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.dataset.page === pageName) {
+            btn.classList.add('active');
+        }
+    });
+    
+    // Update page visibility
+    document.querySelectorAll('.page').forEach(page => {
+        page.style.display = 'none';
+    });
+    document.getElementById(`${pageName}-page`).style.display = 'block';
+    
+    // If switching to stats page, populate the batter dropdown
+    if (pageName === 'stats') {
+        populateBatterDropdown();
+        displayGameStats();
+    }
+    
+    // If switching to history page, load historical stats
+    if (pageName === 'history') {
+        loadHistoricalStats();
+    }
+}
+
+function populateBatterDropdown() {
+    const select = document.getElementById('current-batter');
+    select.innerHTML = '<option value="">Select a player...</option>';
+    
+    // Only show players in the batting lineup
+    battingLineup.forEach(player => {
+        const option = document.createElement('option');
+        option.value = player.id;
+        option.textContent = player.name;
+        select.appendChild(option);
+    });
+}
+
+function updateCurrentBatter(e) {
+    currentAtBat.playerId = parseInt(e.target.value);
+}
+
+function updateAtBatNumber(e) {
+    currentAtBat.atBatNumber = parseInt(e.target.value);
+}
+
+function recordAtBatResult(result) {
+    if (!currentAtBat.playerId) {
+        alert('Please select a batter first!');
+        return;
+    }
+    
+    const playerId = currentAtBat.playerId;
+    const atBatNum = currentAtBat.atBatNumber;
+    
+    // Initialize player stats if not exists
+    if (!gameStats[playerId]) {
+        const player = teammates.find(t => t.id === playerId);
+        gameStats[playerId] = {
+            name: player.name,
+            atBats: [],
+            hits: 0,
+            singles: 0,
+            doubles: 0,
+            triples: 0,
+            homeruns: 0,
+            outs: 0,
+            fieldersChoice: 0,
+            rbi: 0
+        };
+    }
+    
+    // Check if this at-bat number already exists for this player
+    const existingAtBatIndex = gameStats[playerId].atBats.findIndex(ab => ab.number === atBatNum);
+    
+    if (existingAtBatIndex !== -1) {
+        // At-bat already exists - ask if they want to replace it
+        const existingResult = gameStats[playerId].atBats[existingAtBatIndex].result;
+        const confirmReplace = confirm(
+            `At-bat #${atBatNum} for ${gameStats[playerId].name} already recorded as ${existingResult.replace('-', ' ').toUpperCase()}.\n\n` +
+            `Replace with ${result.replace('-', ' ').toUpperCase()}?`
+        );
+        
+        if (!confirmReplace) {
+            return;
+        }
+        
+        // Remove the old result from stats
+        const oldResult = existingResult;
+        switch(oldResult) {
+            case 'single':
+                gameStats[playerId].hits--;
+                gameStats[playerId].singles--;
+                break;
+            case 'double':
+                gameStats[playerId].hits--;
+                gameStats[playerId].doubles--;
+                break;
+            case 'triple':
+                gameStats[playerId].hits--;
+                gameStats[playerId].triples--;
+                break;
+            case 'homerun':
+                gameStats[playerId].hits--;
+                gameStats[playerId].homeruns--;
+                break;
+            case 'fielders-choice':
+                gameStats[playerId].fieldersChoice--;
+                break;
+            case 'out':
+                gameStats[playerId].outs--;
+                break;
+        }
+        
+        // Subtract old RBI
+        const oldRBI = gameStats[playerId].atBats[existingAtBatIndex].rbi || 0;
+        gameStats[playerId].rbi -= oldRBI;
+        
+        // Update the at-bat with new result
+        gameStats[playerId].atBats[existingAtBatIndex] = {
+            number: atBatNum,
+            result: result,
+            rbi: currentAtBat.rbi,
+            time: new Date().toLocaleTimeString()
+        };
+    } else {
+        // New at-bat - add it
+        const atBat = {
+            number: atBatNum,
+            result: result,
+            rbi: currentAtBat.rbi,
+            time: new Date().toLocaleTimeString()
+        };
+        
+        gameStats[playerId].atBats.push(atBat);
+        
+        // Sort at-bats by number
+        gameStats[playerId].atBats.sort((a, b) => a.number - b.number);
+    }
+    
+    // Update stats with new result
+    switch(result) {
+        case 'single':
+            gameStats[playerId].hits++;
+            gameStats[playerId].singles++;
+            break;
+        case 'double':
+            gameStats[playerId].hits++;
+            gameStats[playerId].doubles++;
+            break;
+        case 'triple':
+            gameStats[playerId].hits++;
+            gameStats[playerId].triples++;
+            break;
+        case 'homerun':
+            gameStats[playerId].hits++;
+            gameStats[playerId].homeruns++;
+            break;
+        case 'fielders-choice':
+            gameStats[playerId].fieldersChoice++;
+            break;
+        case 'out':
+            gameStats[playerId].outs++;
+            break;
+    }
+    
+    // Find the highest at-bat number across all players
+    let maxAtBat = atBatNum;
+    Object.values(gameStats).forEach(playerStat => {
+        playerStat.atBats.forEach(ab => {
+            if (ab.number > maxAtBat) {
+                maxAtBat = ab.number;
+            }
+        });
+    });
+    
+    // Add RBI
+    gameStats[playerId].rbi += currentAtBat.rbi;
+    
+    // Reset RBI selection to 0 for next at-bat
+    document.querySelectorAll('.rbi-btn').forEach(b => b.classList.remove('active'));
+    document.querySelector('.rbi-btn[data-rbi="0"]').classList.add('active');
+    currentAtBat.rbi = 0;
+    
+    // Update display
+    displayGameStats();
+    
+    // Visual feedback
+    const actionText = existingAtBatIndex !== -1 ? 'Updated' : 'Recorded';
+    const rbiText = currentAtBat.rbi > 0 ? ` with ${currentAtBat.rbi} RBI` : '';
+    alert(`${actionText}: ${gameStats[playerId].name} - At Bat #${atBatNum} - ${result.replace('-', ' ').toUpperCase()}${rbiText}`);
+}
+
+function displayGameStats() {
+    const display = document.getElementById('game-stats-display');
+    display.innerHTML = '';
+    
+    if (Object.keys(gameStats).length === 0) {
+        display.innerHTML = '<p style="color: #666; text-align: center;">No stats recorded yet</p>';
+        return;
+    }
+    
+    Object.values(gameStats).forEach(player => {
+        const playerDiv = document.createElement('div');
+        playerDiv.className = 'player-stats';
+        
+        const atBats = player.atBats.length;
+        const avg = atBats > 0 ? (player.hits / atBats).toFixed(3) : '.000';
+        
+        playerDiv.innerHTML = `
+            <h5>${player.name}</h5>
+            <div class="stat-line">AVG: ${avg} (${player.hits}-${atBats}) | RBI: ${player.rbi}</div>
+            <div class="stat-line">1B: ${player.singles} | 2B: ${player.doubles} | 3B: ${player.triples} | HR: ${player.homeruns}</div>
+            <div class="stat-line">Outs: ${player.outs} | FC: ${player.fieldersChoice}</div>
+        `;
+        
+        display.appendChild(playerDiv);
+    });
+}
+
+async function saveStatsToCloud() {
+    const saveBtn = document.getElementById('save-stats');
+    const originalText = saveBtn.textContent;
+    
+    // Add loading state
+    saveBtn.classList.add('btn-loading');
+    saveBtn.disabled = true;
+    
+    const statsData = {
+        gameDate: new Date().toISOString(),
+        gameStats: gameStats,
+        battingOrder: battingLineup.map(p => ({id: p.id, name: p.name}))
+    };
+    
+    try {
+        const response = await fetch(GOOGLE_SCRIPT_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: {
+                'Content-Type': 'text/plain',
+            },
+            body: JSON.stringify({
+                stats: statsData,
+                savedBy: 'Stats Keeper'
+            })
+        });
+        
+        // Simulate minimum loading time for better UX
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        alert('Game stats saved to cloud!');
+    } catch (error) {
+        console.error('Stats save error:', error);
+        alert('Failed to save stats to cloud.');
+    } finally {
+        // Remove loading state
+        saveBtn.classList.remove('btn-loading');
+        saveBtn.disabled = false;
+        saveBtn.textContent = originalText;
+    }
+}
+
+function clearGameStats() {
+    if (confirm('Clear all stats for this game? This cannot be undone!')) {
+        gameStats = {};
+        currentAtBat = {
+            playerId: null,
+            atBatNumber: 1,
+            result: null,
+            rbi: 0
+        };
+        document.getElementById('current-batter').value = '';
+        document.getElementById('at-bat-number').value = 1;
+        
+        // Reset RBI buttons
+        document.querySelectorAll('.rbi-btn').forEach(b => b.classList.remove('active'));
+        document.querySelector('.rbi-btn[data-rbi="0"]').classList.add('active');
+        
+        displayGameStats();
+    }
+}
+
+// Historical Stats Functions
+let historicalData = [];
+let filteredData = [];
+
+async function loadHistoricalStats() {
+    const refreshBtn = document.getElementById('refresh-history');
+    const originalText = refreshBtn.textContent;
+    
+    // Add loading state
+    refreshBtn.classList.add('btn-loading');
+    refreshBtn.disabled = true;
+    
+    try {
+        const response = await fetch(`${GOOGLE_SCRIPT_URL}?type=stats`);
+        const data = await response.json();
+        
+        if (data.error) {
+            document.getElementById('summary-display').innerHTML = 
+                '<p style="color: #666; text-align: center;">No historical stats found. Play some games first!</p>';
+            document.getElementById('player-stats-body').innerHTML = '';
+            document.getElementById('game-details-container').innerHTML = '';
+            return;
+        }
+        
+        historicalData = data.stats;
+        
+        // Populate player filter dropdown
+        const uniquePlayers = [...new Set(historicalData.map(stat => stat.playerName))].sort();
+        const playerFilter = document.getElementById('player-filter');
+        playerFilter.innerHTML = '<option value="">All Players</option>';
+        uniquePlayers.forEach(player => {
+            const option = document.createElement('option');
+            option.value = player;
+            option.textContent = player;
+            playerFilter.appendChild(option);
+        });
+        
+        // Apply filters and display
+        filterHistoricalStats();
+        
+        // Simulate minimum loading time for better UX
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+    } catch (error) {
+        console.error('Error loading historical stats:', error);
+        alert('Failed to load historical stats. Please check your connection.');
+    } finally {
+        // Remove loading state
+        refreshBtn.classList.remove('btn-loading');
+        refreshBtn.disabled = false;
+        refreshBtn.textContent = originalText;
+    }
+}
+
+function filterHistoricalStats() {
+    const playerFilter = document.getElementById('player-filter').value;
+    const dateFrom = document.getElementById('date-from').value;
+    const dateTo = document.getElementById('date-to').value;
+    
+    filteredData = historicalData.filter(stat => {
+        // Player filter
+        if (playerFilter && stat.playerName !== playerFilter) return false;
+        
+        // Date filters
+        if (dateFrom || dateTo) {
+            const statDate = new Date(stat.gameDate);
+            if (dateFrom && statDate < new Date(dateFrom)) return false;
+            if (dateTo && statDate > new Date(dateTo)) return false;
+        }
+        
+        return true;
+    });
+    
+    displayHistoricalStats();
+}
+
+function displayHistoricalStats() {
+    displaySummaryStats();
+    displayPlayerTable();
+    displayGameDetails();
+}
+
+function displaySummaryStats() {
+    const summaryDisplay = document.getElementById('summary-display');
+    
+    if (filteredData.length === 0) {
+        summaryDisplay.innerHTML = '<p style="color: #666; text-align: center;">No data matches the selected filters</p>';
+        return;
+    }
+    
+    // Calculate summary statistics
+    const totalGames = [...new Set(filteredData.map(stat => stat.gameDate))].length;
+    const totalAtBats = filteredData.reduce((sum, stat) => sum + stat.atBats, 0);
+    const totalHits = filteredData.reduce((sum, stat) => sum + stat.hits, 0);
+    const totalRBI = filteredData.reduce((sum, stat) => sum + (stat.rbi || 0), 0);
+    const teamAverage = totalAtBats > 0 ? (totalHits / totalAtBats).toFixed(3) : '.000';
+    
+    summaryDisplay.innerHTML = `
+        <div class="summary-card">
+            <div class="stat-value">${totalGames}</div>
+            <div class="stat-label">Games Played</div>
+        </div>
+        <div class="summary-card">
+            <div class="stat-value">${teamAverage}</div>
+            <div class="stat-label">Batting Average</div>
+        </div>
+        <div class="summary-card">
+            <div class="stat-value">${totalHits}</div>
+            <div class="stat-label">Total Hits</div>
+        </div>
+        <div class="summary-card">
+            <div class="stat-value">${totalRBI}</div>
+            <div class="stat-label">Total RBI</div>
+        </div>
+    `;
+}
+
+function displayPlayerTable() {
+    const tbody = document.getElementById('player-stats-body');
+    
+    if (filteredData.length === 0) {
+        tbody.innerHTML = '';
+        return;
+    }
+    
+    // Aggregate stats by player
+    const playerStats = {};
+    
+    filteredData.forEach(stat => {
+        if (!playerStats[stat.playerName]) {
+            playerStats[stat.playerName] = {
+                games: new Set(),
+                atBats: 0,
+                hits: 0,
+                singles: 0,
+                doubles: 0,
+                triples: 0,
+                homeRuns: 0,
+                fieldersChoice: 0,
+                outs: 0,
+                rbi: 0
+            };
+        }
+        
+        const player = playerStats[stat.playerName];
+        player.games.add(stat.gameDate);
+        player.atBats += stat.atBats;
+        player.hits += stat.hits;
+        player.singles += stat.singles;
+        player.doubles += stat.doubles;
+        player.triples += stat.triples;
+        player.homeRuns += stat.homeRuns;
+        player.fieldersChoice += stat.fieldersChoice;
+        player.outs += stat.outs;
+        player.rbi += (stat.rbi || 0);
+    });
+    
+    // Convert to array and sort by batting average
+    const playerArray = Object.entries(playerStats).map(([name, stats]) => ({
+        name,
+        games: stats.games.size,
+        atBats: stats.atBats,
+        hits: stats.hits,
+        singles: stats.singles,
+        doubles: stats.doubles,
+        triples: stats.triples,
+        homeRuns: stats.homeRuns,
+        fieldersChoice: stats.fieldersChoice,
+        outs: stats.outs,
+        rbi: stats.rbi,
+        average: stats.atBats > 0 ? (stats.hits / stats.atBats).toFixed(3) : '.000'
+    })).sort((a, b) => parseFloat(b.average) - parseFloat(a.average));
+    
+    // Display in table
+    tbody.innerHTML = playerArray.map(player => `
+        <tr onclick="selectPlayer('${player.name}')">
+            <td>${player.name}</td>
+            <td>${player.games}</td>
+            <td>${player.atBats}</td>
+            <td>${player.hits}</td>
+            <td>${player.average}</td>
+            <td>${player.rbi}</td>
+            <td>${player.singles}</td>
+            <td>${player.doubles}</td>
+            <td>${player.triples}</td>
+            <td>${player.homeRuns}</td>
+            <td>${player.outs}</td>
+        </tr>
+    `).join('');
+}
+
+function displayGameDetails() {
+    const container = document.getElementById('game-details-container');
+    
+    if (filteredData.length === 0) {
+        container.innerHTML = '';
+        return;
+    }
+    
+    // Group by game date
+    const gameGroups = {};
+    filteredData.forEach(stat => {
+        if (!gameGroups[stat.gameDate]) {
+            gameGroups[stat.gameDate] = [];
+        }
+        gameGroups[stat.gameDate].push(stat);
+    });
+    
+    // Sort games by date (most recent first)
+    const sortedGames = Object.entries(gameGroups)
+        .sort(([dateA], [dateB]) => new Date(dateB) - new Date(dateA))
+        .slice(0, 5); // Show last 5 games
+    
+    container.innerHTML = `
+        <h4>Recent Games (Last 5)</h4>
+        ${sortedGames.map(([date, players]) => {
+            const gameHits = players.reduce((sum, p) => sum + p.hits, 0);
+            const gameAtBats = players.reduce((sum, p) => sum + p.atBats, 0);
+            const gameAvg = gameAtBats > 0 ? (gameHits / gameAtBats).toFixed(3) : '.000';
+            
+            return `
+                <div class="game-detail-item">
+                    <h4>${new Date(date).toLocaleDateString()} - Team AVG: ${gameAvg}</h4>
+                    ${players.map(p => `
+                        <div class="game-player-stat">
+                            <span>${p.playerName}</span>
+                            <span>${p.hits}-${p.atBats} (${p.battingAverage})</span>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }).join('')}
+    `;
+}
+
+function selectPlayer(playerName) {
+    // Update filter and re-filter data
+    document.getElementById('player-filter').value = playerName;
+    filterHistoricalStats();
+    
+    // Highlight selected row
+    document.querySelectorAll('.stats-table tbody tr').forEach(row => {
+        row.classList.remove('selected');
+        if (row.cells[0].textContent === playerName) {
+            row.classList.add('selected');
+        }
+    });
+}
