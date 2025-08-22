@@ -291,13 +291,6 @@ h2 {
     box-shadow: 0 2px 4px rgba(34, 197, 94, 0.3);
 }
 
-.logout-btn {
-    background-color: #6b7280 !important;
-}
-
-.logout-btn:hover {
-    background-color: #4b5563 !important;
-}
 
 .field-position-label {
     font-size: 12px;

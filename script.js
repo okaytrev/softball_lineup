@@ -427,7 +427,6 @@ function setupEventListeners() {
     document.getElementById('remove-player-btn').addEventListener('click', toggleRemoveMode);
     document.getElementById('copy-roster-btn').addEventListener('click', copyRoster);
     document.getElementById('reset-roster-btn').addEventListener('click', resetRoster);
-    document.getElementById('logout-btn').addEventListener('click', logout);
     document.getElementById('player-name-input').addEventListener('keypress', (e) => {
         if (e.key === 'Enter') addPlayer();
     });
@@ -537,12 +536,6 @@ function resetRoster() {
     }
 }
 
-function logout() {
-    if (confirm('Are you sure you want to logout?')) {
-        localStorage.removeItem('softballAuth');
-        location.reload();
-    }
-}
 
 function resetField() {
     fieldPositions = {};
