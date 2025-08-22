@@ -2,6 +2,7 @@ let teammates = [];
 let fieldPositions = {};
 let battingLineup = [];
 let nextSubId = 100; // Start substitute IDs at 100 to avoid conflicts
+let selectedPlayer = null; // Track currently selected player for touch mode
 
 async function loadTeammates() {
     try {
@@ -82,6 +83,11 @@ function createPlayerCard(player, forLineup = false) {
             positionLabel.textContent = getPositionAbbreviation(position);
         }
         card.appendChild(positionLabel);
+    }
+    
+    // Add click handler for touch-friendly selection
+    if (!forLineup) {
+        card.addEventListener('click', () => handlePlayerClick(player));
     }
     
     setupPlayerCardDragEvents(card);
@@ -290,13 +296,69 @@ function removePlayerFromField(playerId) {
     });
 }
 
+function handlePlayerClick(player) {
+    // Remove previous selection
+    document.querySelectorAll('.player-card.selected').forEach(card => {
+        card.classList.remove('selected');
+    });
+    
+    // Remove available state from zones
+    document.querySelectorAll('.drop-zone.available').forEach(zone => {
+        zone.classList.remove('available');
+    });
+    
+    // If clicking the same player, deselect
+    if (selectedPlayer && selectedPlayer.id === player.id) {
+        selectedPlayer = null;
+        return;
+    }
+    
+    // Select new player
+    selectedPlayer = player;
+    const playerCard = document.querySelector(`.player-card[data-player-id="${player.id}"]`);
+    if (playerCard && !playerCard.closest('.lineup-item')) {
+        playerCard.classList.add('selected');
+        
+        // Show available drop zones
+        document.querySelectorAll('.drop-zone:not(.occupied)').forEach(zone => {
+            zone.classList.add('available');
+        });
+    }
+}
+
 function handleZoneClick(e) {
     const position = e.target.dataset.position;
-    if (fieldPositions[position]) {
+    
+    // If a player is selected and zone is empty, place the player
+    if (selectedPlayer && !fieldPositions[position]) {
+        // Remove player from any existing position
+        removePlayerFromField(selectedPlayer.id);
+        
+        // Place player in new position
+        fieldPositions[position] = selectedPlayer.id;
+        
+        // Clear selection
+        clearSelection();
+        
+        updateAllSections();
+        saveData();
+    }
+    // If no player selected and position is occupied, remove the player
+    else if (!selectedPlayer && fieldPositions[position]) {
         removePlayerFromField(fieldPositions[position]);
         updateAllSections();
         saveData();
     }
+}
+
+function clearSelection() {
+    selectedPlayer = null;
+    document.querySelectorAll('.player-card.selected').forEach(card => {
+        card.classList.remove('selected');
+    });
+    document.querySelectorAll('.drop-zone.available').forEach(zone => {
+        zone.classList.remove('available');
+    });
 }
 
 function getPositionAbbreviation(position) {
@@ -325,6 +387,15 @@ function setupEventListeners() {
     document.getElementById('add-sub-btn').addEventListener('click', addSubstitute);
     document.getElementById('sub-name-input').addEventListener('keypress', (e) => {
         if (e.key === 'Enter') addSubstitute();
+    });
+    
+    // Clear selection when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.player-card') && 
+            !e.target.closest('.drop-zone') &&
+            selectedPlayer) {
+            clearSelection();
+        }
     });
 }
 

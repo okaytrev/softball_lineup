@@ -196,6 +196,35 @@ h2 {
     border-color: #22c55e;
 }
 
+.player-card.selected {
+    background-color: #fbbf24;
+    border-color: #f59e0b;
+    color: #1a1a1a;
+    transform: scale(1.05);
+    box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.3);
+}
+
+.drop-zone.available {
+    animation: pulse 1.5s infinite;
+    border-color: #fbbf24;
+    background-color: rgba(251, 191, 36, 0.1);
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(1.05);
+        opacity: 0.8;
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
 .lineup-item .player-card {
     margin: 0;
 }
