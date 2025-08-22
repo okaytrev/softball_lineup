@@ -196,7 +196,6 @@ function setupPlayerCardDragEvents(card) {
 function setupDragAndDrop() {
     const dropZones = document.querySelectorAll('.drop-zone');
     const lineupList = document.getElementById('lineup-list');
-    const playerList = document.getElementById('player-list');
     
     dropZones.forEach(zone => {
         zone.addEventListener('dragover', handleDragOver);
@@ -247,7 +246,6 @@ function handleFieldDrop(e) {
     e.stopPropagation();
     
     const playerId = parseInt(e.dataTransfer.getData('playerId'));
-    const playerName = e.dataTransfer.getData('playerName');
     const position = e.target.dataset.position;
     
     if (!position) return;
