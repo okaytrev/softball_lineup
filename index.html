@@ -14,8 +14,8 @@
             <h1>Softball Manager</h1>
             <nav class="nav-menu">
                 <button class="nav-btn active" data-page="lineup">Lineup</button>
-                <button class="nav-btn" data-page="stats">Stats</button>
-                <button class="nav-btn" data-page="history">History</button>
+                <button class="nav-btn" data-page="stats">Scorecard</button>
+                <button class="nav-btn" data-page="history">Stats</button>
             </nav>
         </header>
         
@@ -91,7 +91,7 @@
                     <button id="reset-field">Reset Field</button>
                     <button id="copy-lineup">Copy Lineup</button>
                     <button id="export-lineup">Export Lineup</button>
-                    <button id="save-cloud" class="cloud-btn">Save to Cloud</button>
+                    <button id="save-lineup" class="cloud-btn">Save Lineup</button>
                 </div>
             </div>
             
@@ -102,27 +102,38 @@
         </div>
         </div>
         
-        <!-- Stats Page -->
+        <!-- Scorecard Page -->
         <div id="stats-page" class="page" style="display: none;">
             <div class="stats-container">
                 <div class="stats-header">
-                    <h2>Game Stats</h2>
+                    <h2>Game Scorecard</h2>
                     <button class="help-btn" id="stats-help-btn">?</button>
                 </div>
                 
                 <!-- Help tooltip -->
                 <div id="stats-help" class="help-tooltip" style="display: none;">
                     <div class="help-content">
-                        <h4>How to Record Stats</h4>
+                        <h4>How to Record Game Stats</h4>
                         <ol>
-                            <li><strong>Select Batter:</strong> Choose player from batting lineup</li>
-                            <li><strong>Set At-Bat #:</strong> Enter the at-bat number (doesn't auto-increment)</li>
-                            <li><strong>Choose RBI:</strong> Select 0-4 runs this batter drove in</li>
-                            <li><strong>Did Player Score:</strong> Yes if this batter scored a run</li>
-                            <li><strong>Record Result:</strong> Click the at-bat result button</li>
-                            <li><strong>Fix Mistakes:</strong> Re-select same at-bat # to correct</li>
+                            <li><strong>Select Batter:</strong> Choose the current player from your batting lineup</li>
+                            <li><strong>Set At-Bat #:</strong> Use + / - buttons or type the at-bat number</li>
+                            <li><strong>Choose RBI:</strong> Select how many runs were batted in (0-4)</li>
+                            <li><strong>Record Result:</strong> Click the at-bat result (Single, Double, Triple, HR, Sac Fly, Out)</li>
+                            <li><strong>Did Player Score?</strong> This appears after recording - select Yes/No if the player scored</li>
                         </ol>
-                        <p><strong>Tip:</strong> RBI = runs driven in by this batter. Runs = this batter scoring.</p>
+                        <h4>Key Features</h4>
+                        <ul>
+                            <li><strong>Status Indicator:</strong> Shows if at-bat is already recorded or new</li>
+                            <li><strong>Baseball Diamond:</strong> Visual shows the hit result with base paths</li>
+                            <li><strong>Edit Previous At-Bats:</strong> Click any at-bat in Today's Stats to review/edit</li>
+                            <li><strong>Sacrifice Fly:</strong> Counts for RBI but NOT as an official at-bat for batting average</li>
+                        </ul>
+                        <p><strong>Tips:</strong></p>
+                        <ul>
+                            <li>RBI = Runs Batted In (teammates who scored because of this hit)</li>
+                            <li>Runs = Whether THIS batter crossed home plate</li>
+                            <li>You can update runs/RBI after recording by selecting the at-bat again</li>
+                        </ul>
                     </div>
                 </div>
                 
@@ -136,7 +147,14 @@
                             </select>
                             
                             <label>At Bat #:</label>
-                            <input type="number" id="at-bat-number" class="at-bat-input" min="1" value="1">
+                            <div class="at-bat-number-wrapper">
+                                <div class="at-bat-number-container">
+                                    <button type="button" class="at-bat-btn at-bat-prev" id="at-bat-prev">−</button>
+                                    <input type="number" id="at-bat-number" class="at-bat-input" min="1" value="1">
+                                    <button type="button" class="at-bat-btn at-bat-next" id="at-bat-next">+</button>
+                                </div>
+                                <span class="at-bat-status" id="at-bat-status"></span>
+                            </div>
                         </div>
                         
                         <div class="rbi-section">
@@ -150,14 +168,6 @@
                             </div>
                         </div>
                         
-                        <div class="runs-section">
-                            <label>Did This Player Score?</label>
-                            <div class="runs-buttons">
-                                <button class="runs-btn active" data-runs="0">No</button>
-                                <button class="runs-btn" data-runs="1">Yes</button>
-                            </div>
-                        </div>
-                        
                         <div class="at-bat-results">
                             <h4>At-Bat Result:</h4>
                             <div class="result-buttons">
@@ -165,8 +175,42 @@
                                 <button class="result-btn" data-result="double">Double</button>
                                 <button class="result-btn" data-result="triple">Triple</button>
                                 <button class="result-btn" data-result="homerun">Home Run</button>
-                                <button class="result-btn" data-result="fielders-choice">Fielder's Choice</button>
+                                <button class="result-btn" data-result="sacrifice-fly">Sacrifice Fly</button>
                                 <button class="result-btn" data-result="out">Out</button>
+                            </div>
+                            
+                            <!-- Baseball Diamond Visualization -->
+                            <div class="diamond-result-container" style="display: none;">
+                                <svg class="diamond-svg" viewBox="0 0 300 300" width="300" height="300">
+                                    <!-- Diamond shape -->
+                                    <path d="M150,50 L250,150 L150,250 L50,150 Z" fill="#2a5434" stroke="#fff" stroke-width="2"/>
+                                    
+                                    <!-- Bases -->
+                                    <rect x="235" y="135" width="30" height="30" fill="#fff" stroke="#000" stroke-width="2" class="base first-base"/>
+                                    <rect x="135" y="35" width="30" height="30" fill="#fff" stroke="#000" stroke-width="2" class="base second-base"/>
+                                    <rect x="35" y="135" width="30" height="30" fill="#fff" stroke="#000" stroke-width="2" class="base third-base"/>
+                                    <path d="M150,235 L165,250 L135,250 Z" fill="#fff" stroke="#000" stroke-width="2" class="base home-plate"/>
+                                    
+                                    <!-- Runner indicator -->
+                                    <circle class="runner" cx="150" cy="242" r="8" fill="#ff6b6b" stroke="#000" stroke-width="2" style="display: none;"/>
+                                    
+                                    <!-- Base paths -->
+                                    <path class="base-path single-path" d="M150,242 L250,150" stroke="#ffd700" stroke-width="4" fill="none" stroke-dasharray="5,5" style="display: none;"/>
+                                    <path class="base-path double-path" d="M150,242 L250,150 L150,50" stroke="#ffd700" stroke-width="4" fill="none" stroke-dasharray="5,5" style="display: none;"/>
+                                    <path class="base-path triple-path" d="M150,242 L250,150 L150,50 L50,150" stroke="#ffd700" stroke-width="4" fill="none" stroke-dasharray="5,5" style="display: none;"/>
+                                    <path class="base-path homerun-path" d="M150,242 L250,150 L150,50 L50,150 L150,242" stroke="#ffd700" stroke-width="4" fill="none" stroke-dasharray="5,5" style="display: none;"/>
+                                    
+                                    <!-- Result text -->
+                                    <text x="150" y="155" text-anchor="middle" font-size="20" font-weight="bold" fill="#fff" class="result-text"></text>
+                                </svg>
+                            </div>
+                        </div>
+                        
+                        <div class="runs-section" style="display: none;">
+                            <label>Did This Player Score?</label>
+                            <div class="runs-buttons">
+                                <button class="runs-btn active" data-runs="0">No</button>
+                                <button class="runs-btn" data-runs="1">Yes</button>
                             </div>
                         </div>
                     </div>
@@ -178,7 +222,7 @@
                         </div>
                         
                         <div class="stats-controls">
-                            <button id="save-stats" class="cloud-btn">Save Stats to Cloud</button>
+                            <button id="save-stats" class="cloud-btn">Save Stats and End Game</button>
                             <button id="clear-stats">Clear Today's Stats</button>
                         </div>
                     </div>
@@ -186,10 +230,10 @@
             </div>
         </div>
         
-        <!-- History Page -->
+        <!-- Stats Page -->
         <div id="history-page" class="page" style="display: none;">
             <div class="history-container">
-                <h2>Season Statistics</h2>
+                <h2>Player Statistics</h2>
                 
                 <div class="history-controls">
                     <div class="filter-section">

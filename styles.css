@@ -587,6 +587,90 @@ h2 {
     background-color: #4a4a4a;
 }
 
+/* At-bat number container */
+.at-bat-number-container {
+    display: flex;
+    align-items: center;
+    gap: 0;
+}
+
+.at-bat-input {
+    width: 80px;
+    text-align: center;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+    -moz-appearance: textfield;
+}
+
+.at-bat-input::-webkit-outer-spin-button,
+.at-bat-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.at-bat-btn {
+    padding: 8px 16px;
+    background-color: #3a3a3a;
+    color: #e0e0e0;
+    border: 1px solid #555;
+    font-size: 18px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    user-select: none;
+}
+
+.at-bat-prev {
+    border-radius: 4px 0 0 4px;
+    border-right: none;
+}
+
+.at-bat-next {
+    border-radius: 0 4px 4px 0;
+    border-left: none;
+}
+
+.at-bat-btn:hover {
+    background-color: #4a4a4a;
+    color: #4ade80;
+}
+
+.at-bat-btn:active {
+    background-color: #2a2a2a;
+    transform: scale(0.95);
+}
+
+/* At-bat status indicator */
+.at-bat-number-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.at-bat-status {
+    font-size: 12px;
+    font-weight: 500;
+    text-align: center;
+    padding: 4px 8px;
+    border-radius: 4px;
+    display: none;
+}
+
+.at-bat-status.recorded {
+    display: block;
+    background-color: rgba(34, 197, 94, 0.2);
+    color: #4ade80;
+    border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.at-bat-status.new {
+    display: block;
+    background-color: rgba(59, 130, 246, 0.2);
+    color: #60a5fa;
+    border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
 .at-bat-results h4 {
     color: #4ade80;
     margin-bottom: 15px;
@@ -677,6 +761,28 @@ h2 {
     margin: 5px 0;
 }
 
+.at-bat-details {
+    font-size: 12px;
+    color: #60a5fa;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid #333;
+    line-height: 1.6;
+}
+
+.at-bat-link {
+    cursor: pointer;
+    transition: all 0.2s ease;
+    padding: 2px 4px;
+    border-radius: 3px;
+}
+
+.at-bat-link:hover {
+    background-color: rgba(96, 165, 250, 0.2);
+    color: #93c5fd;
+    text-decoration: underline;
+}
+
 /* RBI Selection */
 .rbi-section {
     margin: 20px 0;
@@ -697,6 +803,61 @@ h2 {
     color: #999;
     margin-bottom: 15px;
 }
+
+/* Result buttons grid layout */
+.result-buttons {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+/* Baseball diamond visualization */
+.diamond-result-container {
+    margin: 20px auto;
+    max-width: 300px;
+    background-color: #1a1a1a;
+    border-radius: 12px;
+    padding: 20px;
+    border: 2px solid #333;
+}
+
+.diamond-svg {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+.diamond-svg .base {
+    transition: fill 0.3s ease;
+}
+
+.diamond-svg .base.active {
+    fill: #ffd700;
+}
+
+.diamond-svg .runner {
+    animation: pulse 1s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0% { r: 8; opacity: 1; }
+    50% { r: 10; opacity: 0.8; }
+    100% { r: 8; opacity: 1; }
+}
+
+.diamond-svg .base-path {
+    opacity: 0;
+    animation: drawPath 2s ease-in-out forwards;
+}
+
+@keyframes drawPath {
+    to {
+        opacity: 1;
+        stroke-dashoffset: 0;
+    }
+}
+
 
 .rbi-buttons {
     display: flex;
@@ -818,6 +979,7 @@ h2 {
 @media (max-width: 768px) {
     .container {
         padding: 10px;
+        max-width: 100%;
     }
     
     /* Loading indicator mobile adjustment */
@@ -847,11 +1009,14 @@ h2 {
     .nav-menu {
         gap: 5px;
         margin-bottom: 15px;
+        flex-wrap: wrap;
     }
     
     .nav-btn {
         padding: 8px 12px;
         font-size: 14px;
+        flex: 1;
+        min-width: 80px;
     }
     
     .available-players-section {
@@ -956,6 +1121,15 @@ h2 {
         font-size: 14px;
     }
     
+    .at-bat-btn {
+        padding: 8px 12px;
+        font-size: 16px;
+    }
+    
+    .at-bat-input {
+        width: 60px;
+    }
+    
     .result-buttons {
         grid-template-columns: repeat(3, 1fr);
         gap: 8px;
@@ -966,12 +1140,82 @@ h2 {
         font-size: 13px;
     }
     
-    .rbi-buttons {
-        gap: 5px;
+    /* Mobile grid adjustments */
+    .result-buttons {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
     }
     
-    .rbi-btn {
-        padding: 8px;
+    .diamond-result-container {
+        padding: 15px;
+        max-width: 100%;
+        margin: 15px auto;
+    }
+    
+    .diamond-svg {
+        max-width: 250px;
+        margin: 0 auto;
+    }
+    
+    .rbi-section, .runs-section {
+        margin: 15px 0;
+    }
+    
+    .rbi-buttons, .runs-buttons {
+        gap: 5px;
+        flex-wrap: wrap;
+    }
+    
+    .rbi-btn, .runs-btn {
+        padding: 10px;
+        font-size: 14px;
+        min-width: 45px;
+    }
+    
+    /* Game stats display mobile */
+    .game-stats-section {
+        margin-top: 20px;
+        padding: 15px;
+    }
+    
+    .player-stats {
+        margin-bottom: 12px;
+        padding: 12px;
+    }
+    
+    .player-stats h5 {
+        font-size: 16px;
+        margin-bottom: 10px;
+    }
+    
+    .stat-line {
+        font-size: 13px;
+        line-height: 1.6;
+        margin: 6px 0;
+    }
+    
+    .at-bat-details {
+        font-size: 11px;
+        line-height: 1.8;
+        word-break: break-word;
+    }
+    
+    .at-bat-link {
+        display: inline-block;
+        margin: 2px 0;
+        padding: 3px 6px;
+    }
+    
+    .stats-controls {
+        margin-top: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .stats-controls button {
+        width: 100%;
+        padding: 12px;
         font-size: 14px;
     }
     
@@ -1001,13 +1245,21 @@ h2 {
         margin-bottom: 6px;
     }
     
-    /* History page mobile styles */
+    /* History/Stats page mobile styles */
     .filter-section {
         gap: 10px;
+        flex-direction: column;
+    }
+    
+    .filter-select, .date-input {
+        width: 100%;
+        padding: 10px;
+        font-size: 16px;
     }
     
     .summary-grid {
         gap: 10px;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
     }
     
     .summary-card {
@@ -1020,6 +1272,46 @@ h2 {
     
     .summary-card .stat-label {
         font-size: 0.8em;
+    }
+    
+    /* Help tooltip mobile */
+    .help-tooltip {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 90%;
+        max-width: 400px;
+        max-height: 80vh;
+        overflow-y: auto;
+    }
+    
+    .help-content {
+        padding: 20px;
+    }
+    
+    .help-content h4 {
+        font-size: 16px;
+    }
+    
+    .help-content ol {
+        font-size: 13px;
+        line-height: 1.8;
+    }
+    
+    /* General mobile improvements */
+    button {
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: transparent;
+    }
+    
+    select, input {
+        font-size: 16px; /* Prevents zoom on iOS */
+    }
+    
+    /* Ensure modals and overlays are mobile-friendly */
+    .modal-overlay {
+        padding: 20px;
     }
     
     /* Make stats table scrollable on mobile */
@@ -1220,23 +1512,108 @@ h2 {
 @media (max-width: 480px) {
     h1 {
         font-size: 1.5em;
+        margin-bottom: 10px;
+    }
+    
+    header {
+        padding: 15px 10px;
+        margin-bottom: 15px;
+    }
+    
+    .nav-menu {
+        gap: 3px;
     }
     
     .nav-btn {
-        padding: 6px 10px;
-        font-size: 13px;
+        padding: 8px 8px;
+        font-size: 12px;
+        border-radius: 4px;
+    }
+    
+    /* Lineup tab small screen */
+    .main-content {
+        gap: 15px;
+    }
+    
+    .field-container {
+        min-width: 320px;
+        height: 350px;
     }
     
     .drop-zone {
-        width: 40px;
-        height: 40px;
-        font-size: 10px;
+        width: 38px;
+        height: 38px;
+        font-size: 9px;
+        line-height: 1.1;
     }
     
     .player-list.horizontal .player-card {
-        min-width: 90px;
+        min-width: 85px;
         font-size: 11px;
         padding: 6px;
+    }
+    
+    /* Scorecard tab small screen */
+    .at-bat-btn {
+        padding: 8px 15px;
+        font-size: 16px;
+    }
+    
+    .at-bat-input {
+        width: 60px;
+        font-size: 16px;
+        padding: 8px;
+    }
+    
+    .result-btn {
+        padding: 10px 6px;
+        font-size: 12px;
+    }
+    
+    .rbi-btn, .runs-btn {
+        padding: 8px;
+        font-size: 13px;
+        min-width: 40px;
+    }
+    
+    /* Stats display small screen */
+    .player-stats {
+        padding: 10px;
+        margin-bottom: 10px;
+    }
+    
+    .player-stats h5 {
+        font-size: 14px;
+        margin-bottom: 8px;
+    }
+    
+    .stat-line {
+        font-size: 11px;
+    }
+    
+    .at-bat-details {
+        font-size: 10px;
+    }
+    
+    /* Diamond visualization small screen */
+    .diamond-svg {
+        max-width: 200px;
+    }
+    
+    .diamond-result-container {
+        padding: 10px;
+    }
+    
+    /* Controls and buttons */
+    .controls button,
+    .manage-btn {
+        padding: 8px 12px;
+        font-size: 13px;
+    }
+    
+    .stats-controls button {
+        padding: 10px;
+        font-size: 13px;
     }
     
     .result-buttons {

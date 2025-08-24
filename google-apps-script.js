@@ -1,6 +1,13 @@
 // This code goes in Google Apps Script, not your local files
 // Go to your Google Sheet → Extensions → Apps Script
 // Delete any existing code and paste this:
+//
+// IMPORTANT: Sacrifice flies (SF) do NOT count as official at-bats
+// Batting Average = Hits / (At Bats - Sacrifice Flies)
+//
+// Column structure has been updated:
+// - "Fielders Choice" is now "Sacrifice Fly"
+// - Batting average calculation excludes sacrifice flies
 
 function doGet(e) {
   // Check if requesting stats history
@@ -30,7 +37,7 @@ function doGet(e) {
       homeRuns: row[7],
       battingAverage: row[8],
       outs: row[9],
-      fieldersChoice: row[10],
+      sacrificeFly: row[10],  // Changed from fieldersChoice
       rbi: row[11] || 0,
       runs: row[12] || 0
     }));
@@ -91,7 +98,7 @@ function doPost(e) {
           'Home Runs',
           'Batting Average',
           'Outs',
-          'Fielders Choice',
+          'Sacrifice Fly',
           'RBI',
           'Runs'
         ]);
@@ -111,7 +118,9 @@ function doPost(e) {
       Object.keys(gameStats).forEach(playerId => {
         const playerStats = gameStats[playerId];
         const atBats = playerStats.atBats.length;
-        const battingAverage = atBats > 0 ? (playerStats.hits / atBats).toFixed(3) : '.000';
+        // Calculate official at-bats (excluding sacrifice flies)
+        const officialAtBats = atBats - (playerStats.sacrificeFly || 0);
+        const battingAverage = officialAtBats > 0 ? (playerStats.hits / officialAtBats).toFixed(3) : '.000';
         
         statsSheet.appendRow([
           gameDate,
@@ -124,7 +133,7 @@ function doPost(e) {
           playerStats.homeruns,
           battingAverage,
           playerStats.outs,
-          playerStats.fieldersChoice,
+          playerStats.sacrificeFly || 0,  // Changed from fieldersChoice
           playerStats.rbi || 0,
           playerStats.runs || 0
         ]);

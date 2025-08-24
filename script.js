@@ -443,7 +443,7 @@ function setupEventListeners() {
     document.getElementById('remove-player-btn').addEventListener('click', toggleRemoveMode);
     document.getElementById('copy-roster-btn').addEventListener('click', copyRoster);
     document.getElementById('reset-roster-btn').addEventListener('click', resetRoster);
-    document.getElementById('save-cloud').addEventListener('click', saveToCloud);
+    document.getElementById('save-lineup').addEventListener('click', saveLineup);
     document.getElementById('player-name-input').addEventListener('keypress', (e) => {
         if (e.key === 'Enter') addPlayer();
     });
@@ -478,9 +478,28 @@ function setupEventListeners() {
     document.getElementById('at-bat-number').addEventListener('change', updateAtBatNumber);
     document.getElementById('stats-help-btn').addEventListener('click', toggleStatsHelp);
     
+    // At-bat number increment/decrement buttons
+    document.getElementById('at-bat-prev').addEventListener('click', () => {
+        const input = document.getElementById('at-bat-number');
+        const currentValue = parseInt(input.value) || 1;
+        if (currentValue > 1) {
+            input.value = currentValue - 1;
+            input.dispatchEvent(new Event('change'));
+        }
+    });
+    
+    document.getElementById('at-bat-next').addEventListener('click', () => {
+        const input = document.getElementById('at-bat-number');
+        const currentValue = parseInt(input.value) || 1;
+        input.value = currentValue + 1;
+        input.dispatchEvent(new Event('change'));
+    });
+    
     document.querySelectorAll('.result-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
-            recordAtBatResult(e.target.dataset.result);
+            const result = e.target.dataset.result;
+            recordAtBatResult(result);
+            showDiamondVisualization(result);
         });
     });
     
@@ -490,6 +509,29 @@ function setupEventListeners() {
             document.querySelectorAll('.rbi-btn').forEach(b => b.classList.remove('active'));
             e.target.classList.add('active');
             currentAtBat.rbi = parseInt(e.target.dataset.rbi);
+            
+            // Update the existing at-bat if it exists
+            if (currentAtBat.playerId && gameStats[currentAtBat.playerId]) {
+                const existingAtBat = gameStats[currentAtBat.playerId].atBats.find(
+                    ab => ab.number === currentAtBat.atBatNumber
+                );
+                
+                if (existingAtBat) {
+                    // Update the RBI value for the existing at-bat
+                    const oldRbi = existingAtBat.rbi;
+                    existingAtBat.rbi = currentAtBat.rbi;
+                    
+                    // Update the player's total RBI
+                    gameStats[currentAtBat.playerId].rbi += (currentAtBat.rbi - oldRbi);
+                    
+                    // Refresh the display
+                    displayGameStats();
+                    
+                    // Show feedback
+                    const playerName = gameStats[currentAtBat.playerId].name;
+                    console.log(`Updated: ${playerName} now has ${currentAtBat.rbi} RBI on at-bat #${currentAtBat.atBatNumber}`);
+                }
+            }
         });
     });
     
@@ -499,6 +541,30 @@ function setupEventListeners() {
             document.querySelectorAll('.runs-btn').forEach(b => b.classList.remove('active'));
             e.target.classList.add('active');
             currentAtBat.runs = parseInt(e.target.dataset.runs);
+            
+            // Update the existing at-bat if it exists
+            if (currentAtBat.playerId && gameStats[currentAtBat.playerId]) {
+                const existingAtBat = gameStats[currentAtBat.playerId].atBats.find(
+                    ab => ab.number === currentAtBat.atBatNumber
+                );
+                
+                if (existingAtBat) {
+                    // Update the runs value for the existing at-bat
+                    const oldRuns = existingAtBat.runs;
+                    existingAtBat.runs = currentAtBat.runs;
+                    
+                    // Update the player's total runs
+                    gameStats[currentAtBat.playerId].runs += (currentAtBat.runs - oldRuns);
+                    
+                    // Refresh the display
+                    displayGameStats();
+                    
+                    // Show feedback
+                    const playerName = gameStats[currentAtBat.playerId].name;
+                    const runStatus = currentAtBat.runs === 1 ? 'scored' : 'did not score';
+                    console.log(`Updated: ${playerName} ${runStatus} on at-bat #${currentAtBat.atBatNumber}`);
+                }
+            }
         });
     });
     
@@ -665,9 +731,9 @@ function saveData() {
     localStorage.setItem('softballData', JSON.stringify(data));
 }
 
-// Cloud save to Google Sheets
-async function saveToCloud() {
-    const saveBtn = document.getElementById('save-cloud');
+// Save lineup to Google Sheets
+async function saveLineup() {
+    const saveBtn = document.getElementById('save-lineup');
     const originalText = saveBtn.textContent;
     
     // Add loading state
@@ -856,10 +922,98 @@ function populateBatterDropdown() {
 
 function updateCurrentBatter(e) {
     currentAtBat.playerId = parseInt(e.target.value);
+    
+    // Update at-bat status indicator
+    updateAtBatStatus();
+    
+    // Check if the current at-bat number exists for this player
+    if (currentAtBat.playerId && gameStats[currentAtBat.playerId]) {
+        const existingAtBat = gameStats[currentAtBat.playerId].atBats.find(
+            ab => ab.number === currentAtBat.atBatNumber
+        );
+        
+        if (existingAtBat) {
+            // Show the diamond visualization for the existing at-bat
+            showDiamondVisualization(existingAtBat.result);
+            
+            // Update the RBI and runs buttons to match the existing at-bat
+            document.querySelectorAll('.rbi-btn').forEach(b => b.classList.remove('active'));
+            document.querySelector(`.rbi-btn[data-rbi="${existingAtBat.rbi}"]`).classList.add('active');
+            currentAtBat.rbi = existingAtBat.rbi;
+            
+            document.querySelectorAll('.runs-btn').forEach(b => b.classList.remove('active'));
+            document.querySelector(`.runs-btn[data-runs="${existingAtBat.runs}"]`).classList.add('active');
+            currentAtBat.runs = existingAtBat.runs;
+        } else {
+            // Hide diamond and runs section if no existing at-bat
+            document.querySelector('.diamond-result-container').style.display = 'none';
+            document.querySelector('.runs-section').style.display = 'none';
+        }
+    } else {
+        // Hide diamond and runs section if no player selected
+        document.querySelector('.diamond-result-container').style.display = 'none';
+        document.querySelector('.runs-section').style.display = 'none';
+    }
 }
 
 function updateAtBatNumber(e) {
     currentAtBat.atBatNumber = parseInt(e.target.value);
+    
+    // Update at-bat status indicator
+    updateAtBatStatus();
+    
+    // Check if this at-bat already exists and show diamond visualization
+    if (currentAtBat.playerId && gameStats[currentAtBat.playerId]) {
+        const existingAtBat = gameStats[currentAtBat.playerId].atBats.find(
+            ab => ab.number === currentAtBat.atBatNumber
+        );
+        
+        if (existingAtBat) {
+            // Show the diamond visualization for the existing at-bat
+            showDiamondVisualization(existingAtBat.result);
+            
+            // Update the RBI and runs buttons to match the existing at-bat
+            document.querySelectorAll('.rbi-btn').forEach(b => b.classList.remove('active'));
+            document.querySelector(`.rbi-btn[data-rbi="${existingAtBat.rbi}"]`).classList.add('active');
+            currentAtBat.rbi = existingAtBat.rbi;
+            
+            document.querySelectorAll('.runs-btn').forEach(b => b.classList.remove('active'));
+            document.querySelector(`.runs-btn[data-runs="${existingAtBat.runs}"]`).classList.add('active');
+            currentAtBat.runs = existingAtBat.runs;
+        } else {
+            // Hide diamond and runs section if no existing at-bat
+            document.querySelector('.diamond-result-container').style.display = 'none';
+            document.querySelector('.runs-section').style.display = 'none';
+        }
+    }
+}
+
+// Update at-bat status indicator
+function updateAtBatStatus() {
+    const statusElement = document.getElementById('at-bat-status');
+    
+    if (!currentAtBat.playerId) {
+        statusElement.className = 'at-bat-status';
+        statusElement.textContent = '';
+        return;
+    }
+    
+    if (gameStats[currentAtBat.playerId]) {
+        const existingAtBat = gameStats[currentAtBat.playerId].atBats.find(
+            ab => ab.number === currentAtBat.atBatNumber
+        );
+        
+        if (existingAtBat) {
+            statusElement.className = 'at-bat-status recorded';
+            statusElement.textContent = `✓ Recorded: ${formatResult(existingAtBat.result)}`;
+        } else {
+            statusElement.className = 'at-bat-status new';
+            statusElement.textContent = '● New at-bat';
+        }
+    } else {
+        statusElement.className = 'at-bat-status new';
+        statusElement.textContent = '● New at-bat';
+    }
 }
 
 function recordAtBatResult(result) {
@@ -883,7 +1037,7 @@ function recordAtBatResult(result) {
             triples: 0,
             homeruns: 0,
             outs: 0,
-            fieldersChoice: 0,
+            sacrificeFly: 0,
             rbi: 0,
             runs: 0
         };
@@ -923,8 +1077,8 @@ function recordAtBatResult(result) {
                 gameStats[playerId].hits--;
                 gameStats[playerId].homeruns--;
                 break;
-            case 'fielders-choice':
-                gameStats[playerId].fieldersChoice--;
+            case 'sacrifice-fly':
+                gameStats[playerId].sacrificeFly--;
                 break;
             case 'out':
                 gameStats[playerId].outs--;
@@ -979,8 +1133,8 @@ function recordAtBatResult(result) {
             gameStats[playerId].hits++;
             gameStats[playerId].homeruns++;
             break;
-        case 'fielders-choice':
-            gameStats[playerId].fieldersChoice++;
+        case 'sacrifice-fly':
+            gameStats[playerId].sacrificeFly++;
             break;
         case 'out':
             gameStats[playerId].outs++;
@@ -1011,6 +1165,7 @@ function recordAtBatResult(result) {
     
     // Update display
     displayGameStats();
+    updateAtBatStatus();
     
     // Visual feedback
     const actionText = existingAtBatIndex !== -1 ? 'Updated' : 'Recorded';
@@ -1020,6 +1175,7 @@ function recordAtBatResult(result) {
 
 function displayGameStats() {
     const display = document.getElementById('game-stats-display');
+    
     display.innerHTML = '';
     
     if (Object.keys(gameStats).length === 0) {
@@ -1027,27 +1183,90 @@ function displayGameStats() {
         return;
     }
     
-    Object.values(gameStats).forEach(player => {
+    Object.entries(gameStats).forEach(([playerId, player]) => {
         const playerDiv = document.createElement('div');
         playerDiv.className = 'player-stats';
+        playerDiv.dataset.playerId = playerId;
         
-        const atBats = player.atBats.length;
-        const avg = atBats > 0 ? (player.hits / atBats).toFixed(3) : '.000';
+        // Calculate official at-bats (excluding sacrifice flies)
+        const officialAtBats = player.atBats.filter(ab => ab.result !== 'sacrifice-fly').length;
+        const avg = officialAtBats > 0 ? (player.hits / officialAtBats).toFixed(3) : '.000';
+        
+        // Create at-bat summary with clickable links
+        const atBatDetails = player.atBats.map(ab => {
+            const resultShort = {
+                'single': '1B',
+                'double': '2B',
+                'triple': '3B',
+                'homerun': 'HR',
+                'sacrifice-fly': 'SF',
+                'out': 'Out'
+            }[ab.result] || ab.result;
+            
+            const rbiText = ab.rbi > 0 ? ` (${ab.rbi} RBI)` : '';
+            const runText = ab.runs === 1 ? ' ®' : '';
+            return `<span class="at-bat-link" data-player-id="${playerId}" data-at-bat="${ab.number}" data-result="${ab.result}">#${ab.number}: ${resultShort}${rbiText}${runText}</span>`;
+        }).join(' | ');
         
         playerDiv.innerHTML = `
             <h5>${player.name}</h5>
-            <div class="stat-line">AVG: ${avg} (${player.hits}-${atBats}) | Runs: ${player.runs} | RBI: ${player.rbi}</div>
+            <div class="stat-line">AVG: ${avg} (${player.hits}-${officialAtBats}) | Runs: ${player.runs} | RBI: ${player.rbi}</div>
             <div class="stat-line">1B: ${player.singles} | 2B: ${player.doubles} | 3B: ${player.triples} | HR: ${player.homeruns}</div>
-            <div class="stat-line">Outs: ${player.outs} | FC: ${player.fieldersChoice}</div>
+            <div class="stat-line">Outs: ${player.outs} | SF: ${player.sacrificeFly}</div>
+            ${atBatDetails ? `<div class="at-bat-details">At-Bats: ${atBatDetails}</div>` : ''}
         `;
         
         display.appendChild(playerDiv);
+    });
+    
+    // Add click event listeners to at-bat links
+    display.addEventListener('click', (e) => {
+        if (e.target.classList.contains('at-bat-link')) {
+            const playerId = parseInt(e.target.dataset.playerId);
+            const atBatNum = parseInt(e.target.dataset.atBat);
+            const result = e.target.dataset.result;
+            
+            // Get the at-bat data
+            const playerStats = gameStats[playerId];
+            const atBat = playerStats.atBats.find(ab => ab.number === atBatNum);
+            
+            // Update current selection
+            document.getElementById('current-batter').value = playerId;
+            document.getElementById('at-bat-number').value = atBatNum;
+            
+            // Update current at-bat state
+            currentAtBat.playerId = playerId;
+            currentAtBat.atBatNumber = atBatNum;
+            
+            if (atBat) {
+                // Update the RBI buttons
+                currentAtBat.rbi = atBat.rbi;
+                document.querySelectorAll('.rbi-btn').forEach(b => b.classList.remove('active'));
+                document.querySelector(`.rbi-btn[data-rbi="${atBat.rbi}"]`).classList.add('active');
+                
+                // Update the runs buttons
+                currentAtBat.runs = atBat.runs;
+                document.querySelectorAll('.runs-btn').forEach(b => b.classList.remove('active'));
+                document.querySelector(`.runs-btn[data-runs="${atBat.runs}"]`).classList.add('active');
+            }
+            
+            // Show the diamond visualization
+            showDiamondVisualization(result);
+            
+            // Update status
+            updateAtBatStatus();
+        }
     });
 }
 
 async function saveStatsToCloud() {
     const saveBtn = document.getElementById('save-stats');
     const originalText = saveBtn.textContent;
+    
+    // Confirm before saving and ending game
+    if (!confirm('Save stats and end the current game? This will clear all current game data.')) {
+        return;
+    }
     
     // Add loading state
     saveBtn.classList.add('btn-loading');
@@ -1075,10 +1294,34 @@ async function saveStatsToCloud() {
         // Simulate minimum loading time for better UX
         await new Promise(resolve => setTimeout(resolve, 1000));
         
-        alert('Game stats saved to cloud!');
+        alert('Game stats saved successfully! Starting new game...');
+        
+        // Clear game stats after saving
+        gameStats = {};
+        currentAtBat = {
+            playerId: null,
+            atBatNumber: 1,
+            result: null,
+            rbi: 0,
+            runs: 0
+        };
+        
+        // Reset UI elements
+        document.getElementById('current-batter').value = '';
+        document.getElementById('at-bat-number').value = 1;
+        document.querySelectorAll('.rbi-btn').forEach(b => b.classList.remove('active'));
+        document.querySelector('.rbi-btn[data-rbi="0"]').classList.add('active');
+        document.querySelectorAll('.runs-btn').forEach(b => b.classList.remove('active'));
+        document.querySelector('.runs-btn[data-runs="0"]').classList.add('active');
+        document.querySelector('.diamond-result-container').style.display = 'none';
+        document.querySelector('.runs-section').style.display = 'none';
+        
+        // Update display
+        displayGameStats();
+        updateAtBatStatus();
     } catch (error) {
         console.error('Stats save error:', error);
-        alert('Failed to save stats to cloud.');
+        alert('Failed to save stats. Please try again.');
     } finally {
         // Remove loading state
         saveBtn.classList.remove('btn-loading');
@@ -1105,6 +1348,10 @@ function clearGameStats() {
         document.querySelector('.rbi-btn[data-rbi="0"]').classList.add('active');
         document.querySelectorAll('.runs-btn').forEach(b => b.classList.remove('active'));
         document.querySelector('.runs-btn[data-runs="0"]').classList.add('active');
+        
+        // Hide diamond and runs section
+        document.querySelector('.diamond-result-container').style.display = 'none';
+        document.querySelector('.runs-section').style.display = 'none';
         
         displayGameStats();
     }
@@ -1221,7 +1468,9 @@ function displaySummaryStats() {
     const totalHits = filteredData.reduce((sum, stat) => sum + stat.hits, 0);
     const totalRuns = filteredData.reduce((sum, stat) => sum + (stat.runs || 0), 0);
     const totalRBI = filteredData.reduce((sum, stat) => sum + (stat.rbi || 0), 0);
-    const teamAverage = totalAtBats > 0 ? (totalHits / totalAtBats).toFixed(3) : '.000';
+    const totalSacrificeFlies = filteredData.reduce((sum, stat) => sum + (stat.sacrificeFly || 0), 0);
+    const totalOfficialAtBats = totalAtBats - totalSacrificeFlies;
+    const teamAverage = totalOfficialAtBats > 0 ? (totalHits / totalOfficialAtBats).toFixed(3) : '.000';
     
     summaryDisplay.innerHTML = `
         <div class="summary-card">
@@ -1268,10 +1517,11 @@ function displayPlayerTable() {
                 doubles: 0,
                 triples: 0,
                 homeRuns: 0,
-                fieldersChoice: 0,
+                sacrificeFly: 0,
                 outs: 0,
                 runs: 0,
-                rbi: 0
+                rbi: 0,
+                officialAtBats: 0
             };
         }
         
@@ -1283,10 +1533,12 @@ function displayPlayerTable() {
         player.doubles += stat.doubles;
         player.triples += stat.triples;
         player.homeRuns += stat.homeRuns;
-        player.fieldersChoice += stat.fieldersChoice;
+        player.sacrificeFly += stat.sacrificeFly;
         player.outs += stat.outs;
         player.runs += (stat.runs || 0);
         player.rbi += (stat.rbi || 0);
+        // Calculate official at-bats (total at-bats minus sacrifice flies)
+        player.officialAtBats = player.atBats - player.sacrificeFly;
     });
     
     // Convert to array and sort by batting average
@@ -1299,11 +1551,11 @@ function displayPlayerTable() {
         doubles: stats.doubles,
         triples: stats.triples,
         homeRuns: stats.homeRuns,
-        fieldersChoice: stats.fieldersChoice,
+        sacrificeFly: stats.sacrificeFly,
         outs: stats.outs,
         runs: stats.runs,
         rbi: stats.rbi,
-        average: stats.atBats > 0 ? (stats.hits / stats.atBats).toFixed(3) : '.000'
+        average: stats.officialAtBats > 0 ? (stats.hits / stats.officialAtBats).toFixed(3) : '.000'
     })).sort((a, b) => parseFloat(b.average) - parseFloat(a.average));
     
     // Display in table
@@ -1382,3 +1634,68 @@ function selectPlayer(playerName) {
         }
     });
 }
+
+// Format at-bat result for display
+function formatResult(result) {
+    const resultMap = {
+        'single': 'Single',
+        'double': 'Double',
+        'triple': 'Triple',
+        'homerun': 'Home Run',
+        'sacrifice-fly': 'Sacrifice Fly',
+        'out': 'Out'
+    };
+    return resultMap[result] || result;
+}
+
+// Show diamond visualization
+function showDiamondVisualization(result) {
+    const container = document.querySelector('.diamond-result-container');
+    const runsSection = document.querySelector('.runs-section');
+    const resultText = document.querySelector('.diamond-svg .result-text');
+    const runner = document.querySelector('.diamond-svg .runner');
+    const paths = document.querySelectorAll('.diamond-svg .base-path');
+    const bases = document.querySelectorAll('.diamond-svg .base');
+    
+    // Reset all paths and bases
+    paths.forEach(path => path.style.display = 'none');
+    bases.forEach(base => base.classList.remove('active'));
+    runner.style.display = 'none';
+    
+    // Show container and runs section
+    container.style.display = 'block';
+    runsSection.style.display = 'block';
+    
+    // Set result text
+    resultText.textContent = formatResult(result);
+    
+    // Show appropriate visualization
+    setTimeout(() => {
+        if (result !== 'out' && result !== 'sacrifice-fly') {
+            runner.style.display = 'block';
+            document.querySelector(`.${result}-path`).style.display = 'block';
+            
+            // Highlight bases based on result
+            switch(result) {
+                case 'single':
+                    document.querySelector('.first-base').classList.add('active');
+                    break;
+                case 'double':
+                    document.querySelector('.first-base').classList.add('active');
+                    document.querySelector('.second-base').classList.add('active');
+                    break;
+                case 'triple':
+                    document.querySelector('.first-base').classList.add('active');
+                    document.querySelector('.second-base').classList.add('active');
+                    document.querySelector('.third-base').classList.add('active');
+                    break;
+                case 'homerun':
+                    bases.forEach(base => base.classList.add('active'));
+                    break;
+            }
+        }
+    }, 100);
+    
+    // Don't auto-hide - keep visualization visible
+}
+
